@@ -1,0 +1,617 @@
+{
+  "experimentId": "new-tools",
+  "status": {
+    "startTime": "2026-05-06T02:06:56.194456777Z",
+    "endTime": "2026-05-06T06:06:56.350718087Z",
+    "duration": "4h0m0.156261312s",
+    "numTemplates": 1,
+    "totalTrials": 19,
+    "numSLAPass": 9,
+    "numSLAFail": 10
+  },
+  "config": {
+    "name": "new-tools",
+    "backend": "sglang",
+    "algorithm": "tpe",
+    "optimize": "outputThroughput",
+    "sla": {
+      "ttftP99MaxMs": 2000,
+      "tpotP99MaxMs": 15,
+      "errorRateMax": 0.01
+    },
+    "scenarioName": "chat",
+    "scenarioWorkloads": [
+      "normal(512,256/2048,1024)"
+    ],
+    "scenarioConcurrency": [
+      64,
+      128,
+      256
+    ],
+    "maxTrialsPerTemplate": 20,
+    "earlyStopPatience": 5,
+    "timeout": "4h",
+    "templates": [
+      "single"
+    ],
+    "searchSpace": {
+      "default": {
+        "chunkedPrefillSize": {
+          "type": "categorical",
+          "values": [
+            512,
+            2048,
+            8192
+          ]
+        },
+        "gpuMemoryUtilization": {
+          "type": "categorical",
+          "values": [
+            0.7,
+            0.8,
+            0.9,
+            0.95
+          ]
+        },
+        "maxNumSeqs": {
+          "type": "categorical",
+          "values": [
+            256,
+            512,
+            1024,
+            2048
+          ]
+        },
+        "schedulePolicy": {
+          "type": "categorical",
+          "values": [
+            "lpm",
+            "dfs-weight",
+            "random"
+          ]
+        }
+      }
+    }
+  },
+  "templates": [
+    {
+      "name": "single",
+      "bestTrial": {
+        "trialIndex": 3,
+        "templateName": "single",
+        "params": {
+          "default": {
+            "chunkedPrefillSize": 8192,
+            "gpuMemoryUtilization": 0.8,
+            "maxNumSeqs": 256,
+            "schedulePolicy": "lpm"
+          }
+        },
+        "metrics": {
+          "ttftP50": 8.89710205886513,
+          "ttftP99": 138.99042139437054,
+          "tpotP50": 0.0630949091264591,
+          "tpotP99": 8.88000029401854,
+          "outputThroughput": 869.9938926127479,
+          "inputThroughput": 267.30653792779987,
+          "totalThroughput": 1137.300430540548,
+          "requestsPerSecond": 0.547445879336064,
+          "errorRate": 0,
+          "numCompletedRequests": 296,
+          "numErrorRequests": 0,
+          "numRequests": 296
+        },
+        "slaPass": true,
+        "score": 869.9938926127479,
+        "duration": "12m20.522706119s",
+        "startTime": "2026-05-06T02:42:02.685845899Z",
+        "endTime": "2026-05-06T02:54:23.208552253Z"
+      },
+      "trials": [
+        {
+          "trialIndex": 0,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 512,
+              "gpuMemoryUtilization": 0.7,
+              "maxNumSeqs": 2048,
+              "schedulePolicy": "lpm"
+            }
+          },
+          "metrics": {
+            "ttftP50": 7.670215981081128,
+            "ttftP99": 135.51813207319938,
+            "tpotP50": 0.05471216556303509,
+            "tpotP99": 7.778621248332781,
+            "outputThroughput": 792.3937574152884,
+            "inputThroughput": 205.48354260809606,
+            "totalThroughput": 997.8773000233845,
+            "requestsPerSecond": 0.4899685054863114,
+            "errorRate": 0,
+            "numCompletedRequests": 265,
+            "numErrorRequests": 0,
+            "numRequests": 265
+          },
+          "slaPass": true,
+          "score": 792.3937574152884,
+          "duration": "11m24.544360598s",
+          "startTime": "2026-05-06T02:06:56.574691997Z",
+          "endTime": "2026-05-06T02:18:21.11905259Z"
+        },
+        {
+          "trialIndex": 1,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 2048,
+              "gpuMemoryUtilization": 0.9,
+              "maxNumSeqs": 1024,
+              "schedulePolicy": "lpm"
+            }
+          },
+          "metrics": {
+            "ttftP50": 9.84833523654379,
+            "ttftP99": 16.914604741987002,
+            "tpotP50": 0.07344212347739666,
+            "tpotP99": 10.730414723930888,
+            "outputThroughput": 736.307644660976,
+            "inputThroughput": 226.24898600511733,
+            "totalThroughput": 962.5566306660934,
+            "requestsPerSecond": 0.4844394444942743,
+            "errorRate": 0,
+            "numCompletedRequests": 262,
+            "numErrorRequests": 0,
+            "numRequests": 262
+          },
+          "slaPass": true,
+          "score": 736.307644660976,
+          "duration": "11m50.726603539s",
+          "startTime": "2026-05-06T02:18:21.235502812Z",
+          "endTime": "2026-05-06T02:30:11.962106594Z"
+        },
+        {
+          "trialIndex": 2,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 512,
+              "gpuMemoryUtilization": 0.9,
+              "maxNumSeqs": 512,
+              "schedulePolicy": "random"
+            }
+          },
+          "metrics": {
+            "ttftP50": 10.900184647878632,
+            "ttftP99": 25.50060799998719,
+            "tpotP50": 0.07632498496788463,
+            "tpotP99": 16.263149886033503,
+            "outputThroughput": 793.1202813289369,
+            "inputThroughput": 261.2660387703813,
+            "totalThroughput": 1054.3863200993183,
+            "requestsPerSecond": 0.5436942651613992,
+            "errorRate": 0,
+            "numCompletedRequests": 294,
+            "numErrorRequests": 0,
+            "numRequests": 294
+          },
+          "slaPass": false,
+          "score": 0,
+          "duration": "11m50.342573625s",
+          "startTime": "2026-05-06T02:30:12.170446161Z",
+          "endTime": "2026-05-06T02:42:02.513019783Z"
+        },
+        {
+          "trialIndex": 3,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 8192,
+              "gpuMemoryUtilization": 0.8,
+              "maxNumSeqs": 256,
+              "schedulePolicy": "lpm"
+            }
+          },
+          "metrics": {
+            "ttftP50": 8.89710205886513,
+            "ttftP99": 138.99042139437054,
+            "tpotP50": 0.0630949091264591,
+            "tpotP99": 8.88000029401854,
+            "outputThroughput": 869.9938926127479,
+            "inputThroughput": 267.30653792779987,
+            "totalThroughput": 1137.300430540548,
+            "requestsPerSecond": 0.547445879336064,
+            "errorRate": 0,
+            "numCompletedRequests": 296,
+            "numErrorRequests": 0,
+            "numRequests": 296
+          },
+          "slaPass": true,
+          "score": 869.9938926127479,
+          "duration": "12m20.522706119s",
+          "startTime": "2026-05-06T02:42:02.685845899Z",
+          "endTime": "2026-05-06T02:54:23.208552253Z"
+        },
+        {
+          "trialIndex": 4,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 512,
+              "gpuMemoryUtilization": 0.7,
+              "maxNumSeqs": 256,
+              "schedulePolicy": "lpm"
+            }
+          },
+          "metrics": {
+            "ttftP50": 6.703415913507342,
+            "ttftP99": 141.1736869984167,
+            "tpotP50": 0.055374328321271635,
+            "tpotP99": 8.252802781560458,
+            "outputThroughput": 815.5517730463883,
+            "inputThroughput": 222.8366177695401,
+            "totalThroughput": 1038.3883908159285,
+            "requestsPerSecond": 0.48803987013513034,
+            "errorRate": 0,
+            "numCompletedRequests": 264,
+            "numErrorRequests": 0,
+            "numRequests": 264
+          },
+          "slaPass": true,
+          "score": 815.5517730463883,
+          "duration": "11m51.0630925s",
+          "startTime": "2026-05-06T02:54:23.336515242Z",
+          "endTime": "2026-05-06T03:06:14.39960774Z"
+        },
+        {
+          "trialIndex": 5,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 8192,
+              "gpuMemoryUtilization": 0.95,
+              "maxNumSeqs": 512,
+              "schedulePolicy": "lpm"
+            }
+          },
+          "slaPass": false,
+          "score": 0,
+          "error": "RBG not ready: context deadline exceeded",
+          "duration": "15m0.01230302s",
+          "startTime": "2026-05-06T03:06:14.572852312Z",
+          "endTime": "2026-05-06T03:21:14.58515524Z"
+        },
+        {
+          "trialIndex": 6,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 8192,
+              "gpuMemoryUtilization": 0.8,
+              "maxNumSeqs": 1024,
+              "schedulePolicy": "random"
+            }
+          },
+          "metrics": {
+            "ttftP50": 7.897227534092963,
+            "ttftP99": 141.0824660023394,
+            "tpotP50": 0.0630847613733922,
+            "tpotP99": 6.485385116282834,
+            "outputThroughput": 799.8513640925945,
+            "inputThroughput": 246.4246692499432,
+            "totalThroughput": 1046.2760333425379,
+            "requestsPerSecond": 0.5084398053379506,
+            "errorRate": 0,
+            "numCompletedRequests": 275,
+            "numErrorRequests": 0,
+            "numRequests": 275
+          },
+          "slaPass": true,
+          "score": 799.8513640925945,
+          "duration": "11m50.701020385s",
+          "startTime": "2026-05-06T03:21:14.797969365Z",
+          "endTime": "2026-05-06T03:33:05.498989815Z"
+        },
+        {
+          "trialIndex": 7,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 8192,
+              "gpuMemoryUtilization": 0.95,
+              "maxNumSeqs": 256,
+              "schedulePolicy": "random"
+            }
+          },
+          "slaPass": false,
+          "score": 0,
+          "error": "RBG not ready: context deadline exceeded",
+          "duration": "15m0.016605618s",
+          "startTime": "2026-05-06T03:33:05.630344479Z",
+          "endTime": "2026-05-06T03:48:05.646950056Z"
+        },
+        {
+          "trialIndex": 8,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 8192,
+              "gpuMemoryUtilization": 0.7,
+              "maxNumSeqs": 2048,
+              "schedulePolicy": "lpm"
+            }
+          },
+          "metrics": {
+            "ttftP50": 6.185982230352238,
+            "ttftP99": 137.056299968157,
+            "tpotP50": 0.05370270224054667,
+            "tpotP99": 3.332566962880089,
+            "outputThroughput": 793.8254946075284,
+            "inputThroughput": 219.54109844270866,
+            "totalThroughput": 1013.3665930502372,
+            "requestsPerSecond": 0.46036934653882006,
+            "errorRate": 0,
+            "numCompletedRequests": 249,
+            "numErrorRequests": 0,
+            "numRequests": 249
+          },
+          "slaPass": true,
+          "score": 793.8254946075284,
+          "duration": "11m50.753350813s",
+          "startTime": "2026-05-06T03:48:05.869310812Z",
+          "endTime": "2026-05-06T03:59:56.622661625Z"
+        },
+        {
+          "trialIndex": 9,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 2048,
+              "gpuMemoryUtilization": 0.8,
+              "maxNumSeqs": 1024,
+              "schedulePolicy": "random"
+            }
+          },
+          "metrics": {
+            "ttftP50": 9.576012989040464,
+            "ttftP99": 98.93435924580292,
+            "tpotP50": 0.06492031205413473,
+            "tpotP99": 6.187349683996277,
+            "outputThroughput": 834.7839182771862,
+            "inputThroughput": 243.24453548934875,
+            "totalThroughput": 1078.028453766535,
+            "requestsPerSecond": 0.5342935596657773,
+            "errorRate": 0,
+            "numCompletedRequests": 289,
+            "numErrorRequests": 0,
+            "numRequests": 289
+          },
+          "slaPass": true,
+          "score": 834.7839182771862,
+          "duration": "11m51.07453869s",
+          "startTime": "2026-05-06T03:59:56.767960461Z",
+          "endTime": "2026-05-06T04:11:47.842499142Z"
+        },
+        {
+          "trialIndex": 10,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 512,
+              "gpuMemoryUtilization": 0.8,
+              "maxNumSeqs": 1024,
+              "schedulePolicy": "random"
+            }
+          },
+          "metrics": {
+            "ttftP50": 8.506094214972109,
+            "ttftP99": 154.85526803433885,
+            "tpotP50": 0.06479282728886426,
+            "tpotP99": 2.1332874408457,
+            "outputThroughput": 805.1141648484685,
+            "inputThroughput": 233.1892213432013,
+            "totalThroughput": 1038.30338619167,
+            "requestsPerSecond": 0.4920331415994608,
+            "errorRate": 0,
+            "numCompletedRequests": 266,
+            "numErrorRequests": 0,
+            "numRequests": 266
+          },
+          "slaPass": true,
+          "score": 805.1141648484685,
+          "duration": "11m50.417332773s",
+          "startTime": "2026-05-06T04:11:47.995386584Z",
+          "endTime": "2026-05-06T04:23:38.412719355Z"
+        },
+        {
+          "trialIndex": 11,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 8192,
+              "gpuMemoryUtilization": 0.8,
+              "maxNumSeqs": 512,
+              "schedulePolicy": "dfs-weight"
+            }
+          },
+          "metrics": {
+            "ttftP50": 7.334774205926806,
+            "ttftP99": 31.070608047586937,
+            "tpotP50": 0.06304075760483599,
+            "tpotP99": 6.783734640879562,
+            "outputThroughput": 826.0876393127943,
+            "inputThroughput": 221.68975953963715,
+            "totalThroughput": 1047.7773988524316,
+            "requestsPerSecond": 0.510286116525729,
+            "errorRate": 0,
+            "numCompletedRequests": 276,
+            "numErrorRequests": 0,
+            "numRequests": 276
+          },
+          "slaPass": true,
+          "score": 826.0876393127943,
+          "duration": "12m20.581603387s",
+          "startTime": "2026-05-06T04:23:38.581434983Z",
+          "endTime": "2026-05-06T04:35:59.163038414Z"
+        },
+        {
+          "trialIndex": 12,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 8192,
+              "gpuMemoryUtilization": 0.95,
+              "maxNumSeqs": 256,
+              "schedulePolicy": "dfs-weight"
+            }
+          },
+          "slaPass": false,
+          "score": 0,
+          "error": "RBG not ready: context deadline exceeded",
+          "duration": "15m0.016282902s",
+          "startTime": "2026-05-06T04:35:59.333645458Z",
+          "endTime": "2026-05-06T04:50:59.349928382Z"
+        },
+        {
+          "trialIndex": 13,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 8192,
+              "gpuMemoryUtilization": 0.95,
+              "maxNumSeqs": 256,
+              "schedulePolicy": "dfs-weight"
+            }
+          },
+          "slaPass": false,
+          "score": 0,
+          "error": "RBG not ready: context deadline exceeded",
+          "duration": "15m0.018384299s",
+          "startTime": "2026-05-06T04:50:59.520884601Z",
+          "endTime": "2026-05-06T05:05:59.539268802Z"
+        },
+        {
+          "trialIndex": 14,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 8192,
+              "gpuMemoryUtilization": 0.95,
+              "maxNumSeqs": 256,
+              "schedulePolicy": "dfs-weight"
+            }
+          },
+          "slaPass": false,
+          "score": 0,
+          "error": "RBG not ready: context deadline exceeded",
+          "duration": "15m0.018213303s",
+          "startTime": "2026-05-06T05:05:59.816398699Z",
+          "endTime": "2026-05-06T05:20:59.834612024Z"
+        },
+        {
+          "trialIndex": 15,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 8192,
+              "gpuMemoryUtilization": 0.95,
+              "maxNumSeqs": 256,
+              "schedulePolicy": "dfs-weight"
+            }
+          },
+          "slaPass": false,
+          "score": 0,
+          "error": "RBG not ready: context deadline exceeded",
+          "duration": "15m0.016895176s",
+          "startTime": "2026-05-06T05:21:00.111351767Z",
+          "endTime": "2026-05-06T05:36:00.128246964Z"
+        },
+        {
+          "trialIndex": 16,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 8192,
+              "gpuMemoryUtilization": 0.95,
+              "maxNumSeqs": 256,
+              "schedulePolicy": "dfs-weight"
+            }
+          },
+          "slaPass": false,
+          "score": 0,
+          "error": "RBG not ready: context deadline exceeded",
+          "duration": "15m0.016499503s",
+          "startTime": "2026-05-06T05:36:00.328489989Z",
+          "endTime": "2026-05-06T05:51:00.344989549Z"
+        },
+        {
+          "trialIndex": 17,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 8192,
+              "gpuMemoryUtilization": 0.95,
+              "maxNumSeqs": 256,
+              "schedulePolicy": "dfs-weight"
+            }
+          },
+          "slaPass": false,
+          "score": 0,
+          "error": "RBG not ready: context deadline exceeded",
+          "duration": "15m0.016706475s",
+          "startTime": "2026-05-06T05:51:00.697555847Z",
+          "endTime": "2026-05-06T06:06:00.714262265Z"
+        },
+        {
+          "trialIndex": 18,
+          "templateName": "single",
+          "params": {
+            "default": {
+              "chunkedPrefillSize": 8192,
+              "gpuMemoryUtilization": 0.95,
+              "maxNumSeqs": 256,
+              "schedulePolicy": "dfs-weight"
+            }
+          },
+          "slaPass": false,
+          "score": 0,
+          "error": "RBG not ready: context deadline exceeded",
+          "duration": "55.316680252s",
+          "startTime": "2026-05-06T06:06:00.863467724Z",
+          "endTime": "2026-05-06T06:06:56.180148032Z"
+        }
+      ]
+    }
+  ],
+  "globalBest": {
+    "trialIndex": 3,
+    "templateName": "single",
+    "params": {
+      "default": {
+        "chunkedPrefillSize": 8192,
+        "gpuMemoryUtilization": 0.8,
+        "maxNumSeqs": 256,
+        "schedulePolicy": "lpm"
+      }
+    },
+    "metrics": {
+      "ttftP50": 8.89710205886513,
+      "ttftP99": 138.99042139437054,
+      "tpotP50": 0.0630949091264591,
+      "tpotP99": 8.88000029401854,
+      "outputThroughput": 869.9938926127479,
+      "inputThroughput": 267.30653792779987,
+      "totalThroughput": 1137.300430540548,
+      "requestsPerSecond": 0.547445879336064,
+      "errorRate": 0,
+      "numCompletedRequests": 296,
+      "numErrorRequests": 0,
+      "numRequests": 296
+    },
+    "slaPass": true,
+    "score": 869.9938926127479,
+    "duration": "12m20.522706119s",
+    "startTime": "2026-05-06T02:42:02.685845899Z",
+    "endTime": "2026-05-06T02:54:23.208552253Z"
+  }
+}
