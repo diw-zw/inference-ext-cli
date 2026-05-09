@@ -25,12 +25,12 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/rbgs/cli/cmd/llm/autobenchmark"
-	"sigs.k8s.io/rbgs/cli/cmd/llm/benchmark"
-	"sigs.k8s.io/rbgs/cli/cmd/llm/config"
-	"sigs.k8s.io/rbgs/cli/cmd/llm/generate"
-	"sigs.k8s.io/rbgs/cli/cmd/llm/model"
-	"sigs.k8s.io/rbgs/cli/cmd/llm/svc"
+	"sigs.k8s.io/rbgs/cli/cmd/llmctl/autobenchmark"
+	"sigs.k8s.io/rbgs/cli/cmd/llmctl/benchmark"
+	"sigs.k8s.io/rbgs/cli/cmd/llmctl/config"
+	"sigs.k8s.io/rbgs/cli/cmd/llmctl/generate"
+	"sigs.k8s.io/rbgs/cli/cmd/llmctl/model"
+	"sigs.k8s.io/rbgs/cli/cmd/llmctl/svc"
 	"sigs.k8s.io/rbgs/cli/version"
 
 	// Import plugins to register them

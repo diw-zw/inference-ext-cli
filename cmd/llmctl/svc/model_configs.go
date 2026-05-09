@@ -23,7 +23,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
-	runpkg "sigs.k8s.io/rbgs/cli/cmd/llm/svc/run"
+	runpkg "sigs.k8s.io/rbgs/cli/cmd/llmctl/svc/run"
 )
 
 func newModelConfigsCmd() *cobra.Command {

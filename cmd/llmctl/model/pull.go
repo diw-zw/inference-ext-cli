@@ -32,7 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/rbgs/cli/cmd/llm/shared"
+	"sigs.k8s.io/rbgs/cli/cmd/llmctl/shared"
 	"sigs.k8s.io/rbgs/cli/pkg/config"
 	sourceplugin "sigs.k8s.io/rbgs/cli/pkg/plugin/source"
 	storageplugin "sigs.k8s.io/rbgs/cli/pkg/plugin/storage"

@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 
-	llmmeta "sigs.k8s.io/rbgs/cli/cmd/llm/svc/metadata"
+	llmmeta "sigs.k8s.io/rbgs/cli/cmd/llmctl/svc/metadata"
 )
 
 // TestMain sets up an isolated test environment for all tests in this package.

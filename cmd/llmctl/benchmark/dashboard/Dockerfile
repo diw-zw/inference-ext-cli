@@ -18,7 +18,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy the source code
-COPY cmd/cli/cmd/llm/benchmark/dashboard/ ./dashboard/
+COPY cmd/cli/cmd/llmctl/benchmark/dashboard/ ./dashboard/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} \

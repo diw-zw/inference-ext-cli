@@ -28,7 +28,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 
 	workloadsv1alpha2 "sigs.k8s.io/rbgs/api/workloads/v1alpha2"
-	llmmeta "sigs.k8s.io/rbgs/cli/cmd/llm/svc/metadata"
+	llmmeta "sigs.k8s.io/rbgs/cli/cmd/llmctl/svc/metadata"
 )
 
 // --- newListCmd: command metadata ---

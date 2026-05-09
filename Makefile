@@ -4,7 +4,7 @@ AUTOBENCHMARK_IMG ?= ${IMG_REPO}/rbgs-autobenchmark
 DASHBOARD_IMG     ?= ${IMG_REPO}/rbgs-benchmark-dashboard
 
 AUTOBENCHMARK_DOCKERFILE ?= cmd/autobenchmark/Dockerfile
-DASHBOARD_DOCKERFILE     ?= cmd/llm/benchmark/dashboard/Dockerfile
+DASHBOARD_DOCKERFILE     ?= cmd/llmctl/benchmark/dashboard/Dockerfile
 
 VERSION ?= v0.7.0
 GIT_SHA ?= $(shell git rev-parse --short HEAD || echo "HEAD")
@@ -61,7 +61,7 @@ build-cli: ## Build CLI binary.
 	CGO_ENABLED=0 \
 	GO111MODULE=on \
 	GOPROXY=${GOPROXY} \
-	$(GO_CMD) build -v -o bin/kubectl-rbg -ldflags $(ldflags) ./cmd/llm/
+	$(GO_CMD) build -v -o bin/llmctl -ldflags $(ldflags) ./cmd/llmctl/
 
 CLI_PLATFORMS ?= linux/amd64 linux/arm64 darwin/amd64 darwin/arm64
 
@@ -70,8 +70,8 @@ build-cli-all: ## Build CLI binaries for all platforms.
 	@for platform in $(CLI_PLATFORMS); do \
 		GOOS=$${platform%%/*} GOARCH=$${platform##*/} \
 		CGO_ENABLED=0 GO111MODULE=on GOPROXY=${GOPROXY} \
-		$(GO_CMD) build -v -o bin/kubectl-rbg-$${platform%%/*}-$${platform##*/} -ldflags $(ldflags) ./cmd/llm/; \
-		echo "Built bin/kubectl-rbg-$${platform%%/*}-$${platform##*/}"; \
+		$(GO_CMD) build -v -o bin/llmctl-$${platform%%/*}-$${platform##*/} -ldflags $(ldflags) ./cmd/llmctl/; \
+		echo "Built bin/llmctl-$${platform%%/*}-$${platform##*/}"; \
 	done
 
 .PHONY: build-autobenchmark
@@ -90,14 +90,14 @@ build-dashboard: ## Build benchmark dashboard binary.
 	CGO_ENABLED=0 \
 	GO111MODULE=on \
 	GOPROXY=${GOPROXY} \
-	$(GO_CMD) build -v -o bin/dashboard -ldflags $(ldflags) ./cmd/llm/benchmark/dashboard/
+	$(GO_CMD) build -v -o bin/dashboard -ldflags $(ldflags) ./cmd/llmctl/benchmark/dashboard/
 
 .PHONY: build-all
 build-all: build-cli build-autobenchmark build-dashboard ## Build all binaries.
 
 .PHONY: install
-install: build-cli ## Install kubectl-rbg to GOPATH/bin.
-	cp bin/kubectl-rbg $(GOBIN)/kubectl-rbg
+install: build-cli ## Install llmctl to GOPATH/bin.
+	cp bin/llmctl $(GOBIN)/llmctl
 
 ##@ Test
 

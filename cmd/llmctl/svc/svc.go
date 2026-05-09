@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 
-	"sigs.k8s.io/rbgs/cli/cmd/llm/svc/chat"
+	"sigs.k8s.io/rbgs/cli/cmd/llmctl/svc/chat"
 )
 
 // NewSVCCmd creates the svc subcommand group for managing LLM inference services.
