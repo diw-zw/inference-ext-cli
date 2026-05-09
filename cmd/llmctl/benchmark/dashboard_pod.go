@@ -45,7 +45,6 @@ func buildDashboardPod(namespace string, pvcComponents *PVCComponents) *corev1.P
 			Labels:       labels,
 		},
 		Spec: corev1.PodSpec{
-			ImagePullSecrets: []corev1.LocalObjectReference{{Name: "i-reg"}},
 			Containers: []corev1.Container{
 				{
 					Name:    dashboardContainerName,
