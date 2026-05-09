@@ -1,6 +1,3 @@
-apiVersion: rbg.io/v1
-kind: AutoBenchmarkConfig
-
 # 实验名称（可选，不指定则自动生成 "exp-{timestamp}"）
 # 所有输出归入 PVC 上的 /data/{name}/ 目录
 name: my-experiment

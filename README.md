@@ -104,23 +104,24 @@ See [doc/usage/](doc/usage/) for detailed CLI documentation.
 llmctl --help
 
 # Service management
-llmctl svc run --model <model> --engine vllm
+llmctl svc run <name> <model-id> [--engine vllm]
 llmctl svc list
 llmctl svc delete <name>
 
 # Benchmark
-llmctl benchmark run --config <config.yaml>
-llmctl benchmark list
+llmctl benchmark run <rbg-name> [--config <config.yaml>]
+llmctl benchmark list <rbg-name>
 llmctl benchmark dashboard
 
 # Model operations
 llmctl model list
-llmctl model pull <model>
+llmctl model pull <model-id>
 
 # Configuration
-llmctl config engine list
-llmctl config storage list
-llmctl config source list
+llmctl config view
+llmctl config get-engines
+llmctl config get-sources
+llmctl config get-storages
 ```
 
 ## License
