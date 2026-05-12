@@ -1,5 +1,5 @@
 # Build the auto-benchmark controller binary
-FROM registry-cn-hangzhou.ack.aliyuncs.com/dev/golang:1.24.1 AS builder
+FROM golang:1.26 AS builder
 
 ARG GOPROXY
 ARG GOPRIVATE

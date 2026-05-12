@@ -27,9 +27,6 @@ import (
 
 func fullValidConfig() string {
 	return `
-apiVersion: rbg/v1alpha1
-kind: AutoBenchmarkConfig
-
 templates:
   - name: "agg-tp4"
     template: "./templates/agg-tp4.yaml"
@@ -83,8 +80,6 @@ func TestParse_FullValidConfig(t *testing.T) {
 	cfg, err := Parse([]byte(fullValidConfig()))
 	require.NoError(t, err)
 
-	assert.Equal(t, "rbg/v1alpha1", cfg.APIVersion)
-	assert.Equal(t, "AutoBenchmarkConfig", cfg.Kind)
 	assert.Len(t, cfg.Templates, 2)
 	assert.Equal(t, "agg-tp4", cfg.Templates[0].Name)
 	assert.Equal(t, "./templates/agg-tp4.yaml", cfg.Templates[0].Template)
