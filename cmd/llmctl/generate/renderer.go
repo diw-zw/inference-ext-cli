@@ -324,7 +324,7 @@ func buildShmVolume(withSizeLimit bool) corev1.Volume {
 
 	if withSizeLimit {
 		shmSize := resource.MustParse("30Gi")
-		vol.VolumeSource.EmptyDir.SizeLimit = &shmSize
+		vol.EmptyDir.SizeLimit = &shmSize
 	}
 
 	return vol

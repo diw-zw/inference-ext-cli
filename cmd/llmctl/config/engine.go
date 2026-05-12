@@ -45,7 +45,7 @@ Example:
   kubectl rbg llm config set-engine sglang --config defaultPort=8000`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'set-engine' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config set-engine ENGINE_TYPE [--config key=value]\n\nSee 'kubectl rbg llm config set-engine -h' for examples.")
+				return fmt.Errorf("'set-engine' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config set-engine ENGINE_TYPE [--config key=value]\n\nSee 'kubectl rbg llm config set-engine -h' for examples")
 			}
 			return nil
 		},
@@ -152,7 +152,7 @@ Example:
   kubectl rbg llm config reset-engine sglang`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'reset-engine' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config reset-engine ENGINE_TYPE\n\nSee 'kubectl rbg llm config reset-engine -h' for examples.")
+				return fmt.Errorf("'reset-engine' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config reset-engine ENGINE_TYPE\n\nSee 'kubectl rbg llm config reset-engine -h' for examples")
 			}
 			return nil
 		},

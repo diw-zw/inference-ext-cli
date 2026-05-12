@@ -50,7 +50,7 @@ Examples:
   kubectl rbg llm config add-source huggingface -i`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'add-source' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config add-source NAME [-i]\n\nSee 'kubectl rbg llm config add-source -h' for examples.")
+				return fmt.Errorf("'add-source' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config add-source NAME [-i]\n\nSee 'kubectl rbg llm config add-source -h' for examples")
 			}
 			return nil
 		},
@@ -173,7 +173,7 @@ Example:
   kubectl rbg llm config use-source huggingface`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'use-source' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config use-source NAME\n\nSee 'kubectl rbg llm config use-source -h' for examples.")
+				return fmt.Errorf("'use-source' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config use-source NAME\n\nSee 'kubectl rbg llm config use-source -h' for examples")
 			}
 			return nil
 		},
@@ -212,7 +212,7 @@ Example:
   kubectl rbg llm config set-source huggingface --config token=hf_new_token`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'set-source' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config set-source NAME [--config key=value]\n\nSee 'kubectl rbg llm config set-source -h' for examples.")
+				return fmt.Errorf("'set-source' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config set-source NAME [--config key=value]\n\nSee 'kubectl rbg llm config set-source -h' for examples")
 			}
 			return nil
 		},
@@ -259,7 +259,7 @@ Example:
   kubectl rbg llm config delete-source huggingface`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'delete-source' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config delete-source NAME\n\nSee 'kubectl rbg llm config delete-source -h' for examples.")
+				return fmt.Errorf("'delete-source' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config delete-source NAME\n\nSee 'kubectl rbg llm config delete-source -h' for examples")
 			}
 			return nil
 		},

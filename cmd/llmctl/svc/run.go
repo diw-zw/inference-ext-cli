@@ -306,10 +306,10 @@ func buildGenerateOptions(name, modelID, modelPath string, modeCfg *runpkg.ModeC
 // assembleRBG assembles a RoleBasedGroup from pattern and metadata.
 func assembleRBG(name, namespace string, pattern *workloadsv1alpha2.Pattern, metadata llmmeta.RunMetadata, replicas int32) *workloadsv1alpha2.RoleBasedGroup {
 	podTemplate := getPodTemplateFromPattern(pattern)
-	if podTemplate.ObjectMeta.Labels == nil {
-		podTemplate.ObjectMeta.Labels = make(map[string]string)
+	if podTemplate.Labels == nil {
+		podTemplate.Labels = make(map[string]string)
 	}
-	podTemplate.ObjectMeta.Labels[llmmeta.RunCommandSourceLabelKey] = llmmeta.RunCommandSourceLabelValue
+	podTemplate.Labels[llmmeta.RunCommandSourceLabelKey] = llmmeta.RunCommandSourceLabelValue
 
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {

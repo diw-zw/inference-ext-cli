@@ -75,8 +75,8 @@ func TestPVCStorage_MountStorage_AddsVolumeAndMount(t *testing.T) {
 	require.Len(t, tpl.Spec.Volumes, 1)
 	vol := tpl.Spec.Volumes[0]
 	assert.Equal(t, "model-storage", vol.Name)
-	require.NotNil(t, vol.VolumeSource.PersistentVolumeClaim)
-	assert.Equal(t, "my-pvc", vol.VolumeSource.PersistentVolumeClaim.ClaimName)
+	require.NotNil(t, vol.PersistentVolumeClaim)
+	assert.Equal(t, "my-pvc", vol.PersistentVolumeClaim.ClaimName)
 
 	require.Len(t, tpl.Spec.Containers[0].VolumeMounts, 1)
 	vm := tpl.Spec.Containers[0].VolumeMounts[0]
