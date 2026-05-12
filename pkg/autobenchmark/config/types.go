@@ -18,9 +18,6 @@ package config
 
 // AutoBenchmarkConfig is the top-level configuration for auto-benchmark.
 type AutoBenchmarkConfig struct {
-	APIVersion string `yaml:"apiVersion" json:"apiVersion"`
-	Kind       string `yaml:"kind" json:"kind"`
-
 	// Name is the experiment name, used as the base directory on PVC for all outputs.
 	Name string `yaml:"name" json:"name"`
 
