@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/rbgs/cli/cmd/llmctl/generate"
 	"sigs.k8s.io/rbgs/cli/cmd/llmctl/model"
 	"sigs.k8s.io/rbgs/cli/cmd/llmctl/svc"
-	"sigs.k8s.io/rbgs/cli/version"
 
 	// Import plugins to register them
 	_ "sigs.k8s.io/rbgs/cli/pkg/plugin/engine"
@@ -39,19 +38,13 @@ import (
 	_ "sigs.k8s.io/rbgs/cli/pkg/plugin/storage"
 )
 
-// NewLLMCmd creates the llm command
-func NewLLMCmd(cf *genericclioptions.ConfigFlags) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "llm",
-		Short: "LLM deployment management commands",
-		Long:  `Commands for managing LLM model deployments on Kubernetes using RoleBasedGroup`,
-	}
-
-	return cmd
-}
-
 var (
 	cf *genericclioptions.ConfigFlags
+
+	// Version information, set via ldflags at build time.
+	Version   = "dev"
+	GitCommit = "unknown"
+	BuildDate = "unknown"
 )
 
 var rootCmd = &cobra.Command{
@@ -67,7 +60,7 @@ var rootCmd = &cobra.Command{
 func getVersion() string {
 	return fmt.Sprintf(
 		"RBG CLI Version: %s, git commit: %s, build date: %s",
-		version.Version, version.GitCommit, version.BuildDate,
+		Version, GitCommit, BuildDate,
 	)
 }
 
@@ -91,6 +84,13 @@ func main() {
 	rootCmd.AddCommand(generate.NewGenerateCmd())
 	rootCmd.AddCommand(benchmark.NewBenchmarkCmd(cf))
 	rootCmd.AddCommand(autobenchmark.NewAutoBenchmarkCmd(cf))
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "version",
+		Short: "Print the CLI version",
+		Run: func(_ *cobra.Command, _ []string) {
+			fmt.Println(getVersion())
+		},
+	})
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

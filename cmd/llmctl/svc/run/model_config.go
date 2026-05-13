@@ -216,7 +216,7 @@ func loadUserModels() ([]modelWithSource, error) {
 		// Only process .yaml and .yml files (case-insensitive)
 		name := entry.Name()
 		lowerName := strings.ToLower(name)
-		if !(strings.HasSuffix(lowerName, ".yaml") || strings.HasSuffix(lowerName, ".yml")) {
+		if !strings.HasSuffix(lowerName, ".yaml") && !strings.HasSuffix(lowerName, ".yml") {
 			continue
 		}
 

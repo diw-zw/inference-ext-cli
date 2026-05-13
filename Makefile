@@ -8,7 +8,7 @@ AUTOBENCHMARK_DOCKERFILE  ?= docker/autobenchmark-ctl.Dockerfile
 DASHBOARD_DOCKERFILE      ?= docker/benchmark-dashboard.Dockerfile 
 BENCHMARK_UI_DOCKERFILE   ?= docker/autobenchmark-dashboard.Dockerfile
 
-VERSION ?= v0.7.0
+VERSION ?= v$(shell cat VERSION 2>/dev/null || echo 0.0.0-dev)
 GIT_SHA ?= $(shell git rev-parse --short HEAD || echo "HEAD")
 TAG ?= ${VERSION}-${GIT_SHA}
 
@@ -35,18 +35,12 @@ GOPROXY   ?=
 GOPRIVATE ?=
 GOSUMDB   ?=
 
-# ldflags
-VERSION_PKG=sigs.k8s.io/rbgs/cli/version
+# ldflags — only the llmctl binary declares Version/GitCommit/BuildDate vars
+# in its package main, so injection is scoped to that build target.
+VERSION_PKG=main
 GIT_COMMIT=$(shell git rev-parse HEAD)
 BUILD_DATE=$(shell date +%Y-%m-%dT%H:%M:%S%z)
 ldflags="-s -w -X $(VERSION_PKG).Version=$(TAG) -X $(VERSION_PKG).GitCommit=${GIT_COMMIT} -X ${VERSION_PKG}.BuildDate=${BUILD_DATE}"
-
-DOCKER_BUILD_ARGS := \
-	--build-arg GOPROXY=$(GOPROXY) \
-	--build-arg GOPRIVATE=$(GOPRIVATE) \
-	--build-arg GOSUMDB=$(GOSUMDB) \
-	$(if $(TARGETARCH),--build-arg TARGETARCH=$(TARGETARCH)) \
-	$(if $(TARGETOS),--build-arg TARGETOS=$(TARGETOS))
 
 .PHONY: all
 all: build-cli
@@ -86,7 +80,7 @@ build-autobenchmark-ctl: ## Build autobenchmark controller binary.
 	CGO_ENABLED=0 \
 	GO111MODULE=on \
 	GOPROXY=${GOPROXY} \
-	$(GO_CMD) build -v -o bin/autobenchmark -ldflags $(ldflags) ./cmd/autobenchmark/
+	$(GO_CMD) build -v -o bin/autobenchmark ./cmd/autobenchmark/
 
 .PHONY: build-benchmark-dashboard
 build-benchmark-dashboard: ## Build benchmark dashboard binary.
@@ -95,7 +89,7 @@ build-benchmark-dashboard: ## Build benchmark dashboard binary.
 	CGO_ENABLED=0 \
 	GO111MODULE=on \
 	GOPROXY=${GOPROXY} \
-	$(GO_CMD) build -v -o bin/dashboard -ldflags $(ldflags) ./ui/benchmark/
+	$(GO_CMD) build -v -o bin/dashboard ./ui/benchmark/
 
 .PHONY: build-all
 build-all: build-cli build-autobenchmark-ctl build-benchmark-dashboard ## Build all binaries.
@@ -226,12 +220,12 @@ $(LOCALBIN):
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
-GOLANGCI_LINT_VERSION ?= v1.63.4
+GOLANGCI_LINT_VERSION ?= v2.10.1
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
-	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary

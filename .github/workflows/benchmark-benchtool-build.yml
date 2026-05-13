@@ -43,7 +43,7 @@ jobs:
           IMG_REPO: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
           echo "Building benchmark-tool image with tag: $TAG"
-          make docker-build-benchmark-tool-genai
+          docker build -f tools/genai/Dockerfile -t ${IMG_REPO}/rbgs-benchmark-tool-genai:${TAG} .
 
       - name: Push benchmark-tool image
         env:
@@ -51,7 +51,7 @@ jobs:
           IMG_REPO: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
           echo "Pushing benchmark-tool image with tag: $TAG"
-          make docker-push-benchmark-tool-genai
+          docker push ${IMG_REPO}/rbgs-benchmark-tool-genai:${TAG}
 
       - name: Summary
         run: |

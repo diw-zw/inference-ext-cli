@@ -67,8 +67,8 @@ func TestBuildDashboardPod(t *testing.T) {
 		// Check volume
 		require.Len(t, pod.Spec.Volumes, 1)
 		assert.Equal(t, dashboardDataVolumeName, pod.Spec.Volumes[0].Name)
-		assert.Equal(t, "benchmark-pvc", pod.Spec.Volumes[0].VolumeSource.PersistentVolumeClaim.ClaimName)
-		assert.True(t, pod.Spec.Volumes[0].VolumeSource.PersistentVolumeClaim.ReadOnly)
+		assert.Equal(t, "benchmark-pvc", pod.Spec.Volumes[0].PersistentVolumeClaim.ClaimName)
+		assert.True(t, pod.Spec.Volumes[0].PersistentVolumeClaim.ReadOnly)
 
 		// Check restart policy
 		assert.Equal(t, corev1.RestartPolicyNever, pod.Spec.RestartPolicy)

@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	controllerImage = "rolebasedgroup/rbgs-auto-benchmark:latest"
+	controllerImage = "rolebasedgroup/rbgs-autobenchmark:latest"
 )
 
 // NewAutoBenchmarkCmd creates the "llm auto-benchmark" command.

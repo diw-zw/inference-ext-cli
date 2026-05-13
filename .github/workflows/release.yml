@@ -1,0 +1,267 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v0.8.0). If not specified, uses v{VERSION file content}.'
+        required: false
+        type: string
+
+env:
+  GO_VERSION: "1.26.0"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      version_bare: ${{ steps.version.outputs.version_bare }}
+      git_commit: ${{ steps.version.outputs.git_commit }}
+      build_date: ${{ steps.version.outputs.build_date }}
+      short_sha: ${{ steps.version.outputs.short_sha }}
+      is_latest: ${{ steps.version.outputs.is_latest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine and validate version
+        id: version
+        run: |
+          set -euo pipefail
+
+          # Determine effective tag
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          elif [[ -n "${{ inputs.tag }}" ]]; then
+            TAG="${{ inputs.tag }}"
+          else
+            VERSION_BARE=$(tr -d '[:space:]' < VERSION)
+            TAG="v${VERSION_BARE}"
+          fi
+
+          # Read VERSION file
+          VERSION_BARE=$(tr -d '[:space:]' < VERSION)
+          EXPECTED_TAG="v${VERSION_BARE}"
+
+          # Validate tag matches VERSION file
+          if [[ "${TAG}" != "${EXPECTED_TAG}" ]]; then
+            echo "::error::Tag '${TAG}' does not match VERSION file 'v${VERSION_BARE}'"
+            echo "Please ensure the git tag matches the VERSION file content."
+            exit 1
+          fi
+
+          GIT_COMMIT=$(git rev-parse HEAD)
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          BUILD_DATE=$(date +%Y-%m-%dT%H:%M:%S%z)
+
+          # Mark stable releases (no pre-release suffix) for :latest tagging
+          if [[ "${VERSION_BARE}" == *-* ]]; then
+            IS_LATEST="false"
+          else
+            IS_LATEST="true"
+          fi
+
+          echo "version=${TAG}" >> $GITHUB_OUTPUT
+          echo "version_bare=${VERSION_BARE}" >> $GITHUB_OUTPUT
+          echo "git_commit=${GIT_COMMIT}" >> $GITHUB_OUTPUT
+          echo "build_date=${BUILD_DATE}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "is_latest=${IS_LATEST}" >> $GITHUB_OUTPUT
+
+          echo "Release version: ${TAG}"
+          echo "Git commit: ${GIT_COMMIT}"
+          echo "Build date: ${BUILD_DATE}"
+          echo "Is latest: ${IS_LATEST}"
+
+  build-cli:
+    name: Build CLI (${{ matrix.goos }}/${{ matrix.goarch }})
+    needs: validate
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build CLI binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
+          VERSION: ${{ needs.validate.outputs.version }}
+          GIT_COMMIT: ${{ needs.validate.outputs.git_commit }}
+          BUILD_DATE: ${{ needs.validate.outputs.build_date }}
+        run: |
+          set -euo pipefail
+          VERSION_PKG=main
+          LDFLAGS="-s -w \
+            -X ${VERSION_PKG}.Version=${VERSION} \
+            -X ${VERSION_PKG}.GitCommit=${GIT_COMMIT} \
+            -X ${VERSION_PKG}.BuildDate=${BUILD_DATE}"
+
+          BINARY_NAME=llmctl-${{ matrix.goos }}-${{ matrix.goarch }}
+          go build -mod vendor -v -o "${BINARY_NAME}" -ldflags "${LDFLAGS}" ./cmd/llmctl/
+          chmod +x "${BINARY_NAME}"
+
+          # Generate checksum
+          sha256sum "${BINARY_NAME}" > "${BINARY_NAME}.sha256"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: llmctl-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            llmctl-${{ matrix.goos }}-${{ matrix.goarch }}
+            llmctl-${{ matrix.goos }}-${{ matrix.goarch }}.sha256
+
+  build-images:
+    name: Build Docker Images
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_SECRET }}
+
+      - name: Build and push autobenchmark controller
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/autobenchmark-ctl.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/rbgs-autobenchmark:${{ needs.validate.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/rbgs-autobenchmark:${{ needs.validate.outputs.version }}-${{ needs.validate.outputs.short_sha }}
+            ${{ needs.validate.outputs.is_latest == 'true' && format('{0}/rbgs-autobenchmark:latest', secrets.DOCKERHUB_USERNAME) || '' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push benchmark dashboard
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/benchmark-dashboard.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/rbgs-benchmark-dashboard:${{ needs.validate.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/rbgs-benchmark-dashboard:${{ needs.validate.outputs.version }}-${{ needs.validate.outputs.short_sha }}
+            ${{ needs.validate.outputs.is_latest == 'true' && format('{0}/rbgs-benchmark-dashboard:latest', secrets.DOCKERHUB_USERNAME) || '' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push autobenchmark dashboard
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/autobenchmark-dashboard.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/rbgs-autobenchmark-dashboard:${{ needs.validate.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/rbgs-autobenchmark-dashboard:${{ needs.validate.outputs.version }}-${{ needs.validate.outputs.short_sha }}
+            ${{ needs.validate.outputs.is_latest == 'true' && format('{0}/rbgs-autobenchmark-dashboard:latest', secrets.DOCKERHUB_USERNAME) || '' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  create-release:
+    name: Create Draft Release
+    needs: [validate, build-cli, build-images]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all CLI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Prepare release notes
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          IMG_REPO: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
+          set -euo pipefail
+
+          # Extract changelog section for this version. tools/changelog.sh writes
+          # headings like "## [vX.Y.Z](url) (date)" — match the bracketed form and
+          # stop at the next "## [v..." heading.
+          awk -v v="${VERSION}" '
+            $0 ~ "^## \\[" v "\\]" { p=1; print; next }
+            p && /^## \[v[0-9]/ { exit }
+            p
+          ' CHANGELOG.md > release-notes.md || true
+
+          if [ ! -s release-notes.md ]; then
+            printf '## %s\n\nRelease %s\n' "${VERSION}" "${VERSION}" > release-notes.md
+          fi
+
+          {
+            echo
+            echo "## Docker Images"
+            echo
+            echo "- \`${IMG_REPO}/rbgs-autobenchmark:${VERSION}\`"
+            echo "- \`${IMG_REPO}/rbgs-benchmark-dashboard:${VERSION}\`"
+            echo "- \`${IMG_REPO}/rbgs-autobenchmark-dashboard:${VERSION}\`"
+          } >> release-notes.md
+
+      - name: Generate combined checksums
+        run: |
+          set -euo pipefail
+          cd artifacts
+          shopt -s nullglob
+          files=(llmctl-*.sha256)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::No per-binary .sha256 files found in artifacts/"
+            exit 1
+          fi
+          cat "${files[@]}" > checksums.sha256
+
+      - name: Create Draft GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.validate.outputs.version }}
+          name: ${{ needs.validate.outputs.version }}
+          body_path: release-notes.md
+          draft: true
+          files: |
+            artifacts/llmctl-*
+            artifacts/checksums.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

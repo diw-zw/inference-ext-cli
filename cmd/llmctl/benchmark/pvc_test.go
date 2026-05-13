@@ -213,7 +213,7 @@ func TestBuildTokenizerConfig(t *testing.T) {
 
 			if tt.expectedVolumes > 0 {
 				assert.Equal(t, tokenizerVolumeName, volumes[0].Name)
-				assert.Equal(t, tt.expectedClaimName, volumes[0].VolumeSource.PersistentVolumeClaim.ClaimName)
+				assert.Equal(t, tt.expectedClaimName, volumes[0].PersistentVolumeClaim.ClaimName)
 			}
 
 			if tt.expectedMounts > 0 {
@@ -273,7 +273,7 @@ func TestBuildOutputConfig(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, outputVolumeName, volume.Name)
-			assert.Equal(t, tt.expectedClaimName, volume.VolumeSource.PersistentVolumeClaim.ClaimName)
+			assert.Equal(t, tt.expectedClaimName, volume.PersistentVolumeClaim.ClaimName)
 			assert.Equal(t, outputVolumeName, mount.Name)
 			assert.Equal(t, outputMountPath, mount.MountPath)
 			assert.Equal(t, tt.expectedSubPath, mount.SubPath)

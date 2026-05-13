@@ -44,7 +44,7 @@ import (
 )
 
 const (
-	dashboardImage   = "rolebasedgroup/rbgs-auto-benchmark-dashboard:latest"
+	dashboardImage   = "rolebasedgroup/rbgs-autobenchmark-dashboard:latest"
 	dashboardPort    = 80
 	defaultLocalPort = 18888
 )
