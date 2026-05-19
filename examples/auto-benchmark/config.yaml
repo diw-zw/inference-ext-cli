@@ -35,9 +35,9 @@ scenario:
   name: chat
   workloads:
   - "normal(512,256/2048,1024)"
-  concurrency: [64, 128, 256]
+  concurrency: [32]
   duration: 3m
-  maxRequests: 500
+  maxRequests: 200
 
 # 优化目标和 SLA 约束
 objectives:
@@ -57,11 +57,12 @@ strategy:
 evaluator:
   type: genai-bench
   config:
-    tokenizerSource: Qwen/Qwen3-8B  # genai-bench --model-tokenizer（必填，HuggingFace ID 或本地路径）
+    tokenizerSource: Qwen/Qwen3-8B   # tokenizer（HuggingFace ID 或本地路径）
+    baseSeed: 42                     # 固定 seed 保证 trial 间 workload 一致（可选）
 
 # 结果存储 PVC
 results:
-  pvc: oss1-lj
+  pvc: result-pvc-name
   subPath: auto-benchmark    # PVC 内子路径，数据存储到 /data/ 对应 PVC 的此子目录
 
 # 运行时参数

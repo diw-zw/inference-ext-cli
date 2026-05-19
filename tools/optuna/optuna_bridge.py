@@ -164,7 +164,6 @@ class StudyManager:
                     distributions[flat_key] = IntDistribution(**kwargs)
                 else:
                     raise ValueError(f"Unknown distribution type: {dist_type!r}")
-                    raise ValueError(f"Unexpected search space value for {flat_key}: {type(raw)}")
 
         self.studies[study_name] = study
         self.distributions[study_name] = distributions

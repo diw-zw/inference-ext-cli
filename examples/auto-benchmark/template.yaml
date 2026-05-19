@@ -19,10 +19,6 @@ spec:
           labels:
             rbg.workloads.x-k8s.io/source: rbgcli
         spec:
-          # tolerations:
-          # - key: "node-role.alibabacloud.com/lingjun"
-          #   operator: "Exists"
-          #   effect: "NoSchedule"
           containers:
           - args:
             - --model-path
@@ -68,7 +64,7 @@ spec:
             name: shm
           - name: model-storage
             persistentVolumeClaim:
-              claimName: oss1-lj
+              claimName: result-pvc-name
     workload:
       apiVersion: workloads.x-k8s.io/v1alpha2
       kind: RoleInstanceSet

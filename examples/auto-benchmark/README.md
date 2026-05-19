@@ -35,7 +35,7 @@ docker build -f cmd/autobenchmark/Dockerfile \
 
 This image includes:
 - Auto-benchmark Go controller binary
-- Python runtime with genai-bench and optuna
+- Python runtime with inference-perf, genai-bench, and optuna
 - Optuna bridge script for Bayesian optimization
 
 Push to your registry:
@@ -112,7 +112,7 @@ Edit `config.yaml` to match your environment:
 ### Step 3: Run Auto-Benchmark
 
 ```bash
-kubectl rbg llm auto-benchmark run \
+./bin/llmctl auto-benchmark run \
   -f config.yaml \
   --name qwen3-8b \
   --service-account auto-benchmark-controller \
@@ -131,7 +131,7 @@ The command will:
 While the experiment is running (or after completion), view results:
 
 ```bash
-kubectl rbg llm auto-benchmark dashboard <experiment-name> \
+./bin/llmctl auto-benchmark dashboard <experiment-name> \
   -f config.yaml \
   --image <your-dashboard-image>
 ```
@@ -145,7 +145,7 @@ This will:
 ### Step 5: Stop Experiment (Optional)
 
 ```bash
-kubectl rbg llm auto-benchmark stop <experiment-name>
+./bin/llmctl auto-benchmark stop <experiment-name>
 ```
 
 ## Configuration Highlights
