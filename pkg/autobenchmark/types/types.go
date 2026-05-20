@@ -41,8 +41,12 @@ type TrialResult struct {
 	EndTime      time.Time    `json:"endTime"`
 }
 
-// IsSLAFeasible returns true when all SLA constraints are satisfied (all ≤ 0).
+// IsSLAFeasible returns true when the trial completed without error and all
+// SLA constraints are satisfied (all ≤ 0).
 func (t *TrialResult) IsSLAFeasible() bool {
+	if t.Error != "" {
+		return false
+	}
 	for _, c := range t.Constraints {
 		if c > 0 {
 			return false

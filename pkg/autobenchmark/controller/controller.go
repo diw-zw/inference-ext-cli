@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -30,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	sigsyaml "sigs.k8s.io/yaml"
 
 	"sigs.k8s.io/rbgs/api/workloads/v1alpha2"
 	"sigs.k8s.io/rbgs/cli/pkg/autobenchmark/config"
@@ -223,6 +225,13 @@ func (ctrl *Controller) Run(ctx context.Context) error {
 		logger.Error(err, "Failed to write result detail", "format", "json")
 	}
 
+	// Write best trial RBG YAML
+	if expState.GlobalBest != nil {
+		if err := ctrl.writeBestTrialYAML(expState.GlobalBest); err != nil {
+			logger.Error(err, "Failed to write best trial YAML")
+		}
+	}
+
 	logger.Info("Experiment completed", "summary", report.Summary)
 	return nil
 }
@@ -348,6 +357,7 @@ func (ctrl *Controller) executeTrial(
 		result.Error = fmt.Sprintf("create RBG: %v", err)
 		result.EndTime = time.Now()
 		result.Duration = abtypes.Duration(result.EndTime.Sub(start))
+		ctrl.annotateTrialTimeout(&result, trialCtx)
 		return result
 	}
 
@@ -357,6 +367,7 @@ func (ctrl *Controller) executeTrial(
 		result.Error = fmt.Sprintf("RBG not ready: %v", err)
 		result.EndTime = time.Now()
 		result.Duration = abtypes.Duration(result.EndTime.Sub(start))
+		ctrl.annotateTrialTimeout(&result, trialCtx)
 		return result
 	}
 	modelName := extractServedModelName(baseRBG, ctrl.cfg.Backend)
@@ -378,6 +389,7 @@ func (ctrl *Controller) executeTrial(
 		result.Error = fmt.Sprintf("benchmark failed: %v", err)
 		result.EndTime = time.Now()
 		result.Duration = abtypes.Duration(result.EndTime.Sub(start))
+		ctrl.annotateTrialTimeout(&result, trialCtx)
 		return result
 	}
 
@@ -387,6 +399,7 @@ func (ctrl *Controller) executeTrial(
 		result.Error = fmt.Sprintf("collecting results: %v", err)
 		result.EndTime = time.Now()
 		result.Duration = abtypes.Duration(result.EndTime.Sub(start))
+		ctrl.annotateTrialTimeout(&result, trialCtx)
 		return result
 	}
 
@@ -398,6 +411,49 @@ func (ctrl *Controller) executeTrial(
 
 	logger.Info("Trial completed", "feasible", result.IsSLAFeasible(), "score", result.Score, "constraints", result.Constraints)
 	return result
+}
+
+// annotateTrialTimeout appends trial timeout context to an error result when
+// the trial context's deadline has been exceeded.
+func (ctrl *Controller) annotateTrialTimeout(result *abtypes.TrialResult, trialCtx context.Context) {
+	if result.Error != "" && trialCtx.Err() == context.DeadlineExceeded {
+		result.Error = fmt.Sprintf("%s (trial timeout after %s)", result.Error, ctrl.trialTimeout)
+	}
+}
+
+// writeBestTrialYAML reconstructs the best trial's RBG and writes it as YAML.
+func (ctrl *Controller) writeBestTrialYAML(best *abtypes.TrialResult) error {
+	var tmplPath string
+	for _, t := range ctrl.cfg.Templates {
+		if t.Name == best.TemplateName {
+			tmplPath = t.Template
+			break
+		}
+	}
+	if tmplPath == "" {
+		return fmt.Errorf("template %q not found in config", best.TemplateName)
+	}
+
+	baseRBG, err := lifecycle.LoadTemplate(tmplPath)
+	if err != nil {
+		return fmt.Errorf("loading template %q: %w", best.TemplateName, err)
+	}
+
+	trialRBG, err := ctrl.builder.BuildTrial(baseRBG, best.TrialIndex, best.Params)
+	if err != nil {
+		return fmt.Errorf("building best trial RBG: %w", err)
+	}
+
+	data, err := sigsyaml.Marshal(trialRBG)
+	if err != nil {
+		return fmt.Errorf("marshaling best trial RBG: %w", err)
+	}
+
+	outPath := filepath.Join(ctrl.reportDir, "best_trial.yaml")
+	if err := os.WriteFile(outPath, data, 0644); err != nil {
+		return fmt.Errorf("writing best trial YAML: %w", err)
+	}
+	return nil
 }
 
 // resolveEndpoint determines the inference endpoint for a trial RBG.

@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"os/exec"
@@ -77,6 +78,16 @@ func (g *GenAIBench) Run(ctx context.Context, evalCtx EvalContext) error {
 	cmd.Env = append(os.Environ(), "ENABLE_UI=false")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+
+	if evalCtx.OutputDir != "" {
+		if err := os.MkdirAll(evalCtx.OutputDir, 0755); err == nil {
+			if logFile, err := os.Create(filepath.Join(evalCtx.OutputDir, "benchmark.log")); err == nil {
+				defer logFile.Close()
+				cmd.Stdout = io.MultiWriter(os.Stdout, logFile)
+				cmd.Stderr = io.MultiWriter(os.Stderr, logFile)
+			}
+		}
+	}
 
 	if err := cmd.Run(); err != nil {
 		// genai-bench does not expose a "benchmark-only" mode; after all benchmark
