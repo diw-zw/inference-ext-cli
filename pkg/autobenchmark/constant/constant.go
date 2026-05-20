@@ -23,5 +23,5 @@ const (
 
 	// AutoBenchmarkOriginalNameAnnotationKey is the annotation key used to store
 	// the original experiment name when the resource name is sanitized for DNS-1123 compliance.
-	AutoBenchmarkOriginalNameAnnotationKey = AutoBenchmarkLabelKey + "/original-name"
+	AutoBenchmarkOriginalNameAnnotationKey = AutoBenchmarkLabelKey + "-original-name"
 )

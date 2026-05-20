@@ -79,9 +79,52 @@ func (g *GenAIBench) Run(ctx context.Context, evalCtx EvalContext) error {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("genai-bench failed: %w", err)
+		// genai-bench does not expose a "benchmark-only" mode; after all benchmark
+		// runs finish it unconditionally generates Excel/plots, which can fail in
+		// container environments (e.g. PVC without random-write support). Since
+		// genai-bench writes one result JSON per (scenario × concurrency) immediately
+		// after each run completes, we use the file count as an indirect indicator:
+		// all expected JSONs present ⇒ benchmarks finished, failure is post-benchmark.
+		expected := expectedResultCount(evalCtx.Scenario)
+		actual := countResultJSON(evalCtx.OutputDir)
+		if expected > 0 && actual >= expected {
+			logger.Info("genai-bench exited with error but all result files exist, treating as non-fatal",
+				"error", err, "expectedFiles", expected, "actualFiles", actual)
+		} else {
+			return fmt.Errorf("genai-bench failed (expected %d result files, found %d): %w", expected, actual, err)
+		}
 	}
 	return nil
+}
+
+// expectedResultCount returns the number of result JSON files genai-bench
+// should produce: one per (workload × concurrency) combination.
+func expectedResultCount(scenario config.ScenarioSpec) int {
+	w := len(scenario.Workloads)
+	c := len(scenario.Concurrency)
+	if w == 0 {
+		w = 1
+	}
+	if c == 0 {
+		c = 1
+	}
+	return w * c
+}
+
+// countResultJSON counts benchmark result JSON files in dir,
+// excluding metadata files like experiment_metadata.json.
+func countResultJSON(dir string) int {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return 0
+	}
+	count := 0
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".json") && e.Name() != "experiment_metadata.json" {
+			count++
+		}
+	}
+	return count
 }
 
 // CollectResults reads result JSON files from the given directory and aggregates metrics.
