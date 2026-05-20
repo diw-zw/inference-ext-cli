@@ -52,11 +52,12 @@ export interface ResultSLA {
 }
 
 export interface SearchParamDetail {
-  type: string
+  type: 'int' | 'float' | 'pow2' | 'categorical'
   values?: (number | string)[]
   min?: number
   max?: number
   step?: number
+  log?: boolean
 }
 
 export interface SearchSpace {

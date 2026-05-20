@@ -77,14 +77,16 @@ export function ConfigView({ config }: ConfigViewProps) {
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-sm font-medium font-mono">{name}</span>
                       <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded uppercase ${
-                        detail.type === 'range'
+                        detail.type === 'int' || detail.type === 'float'
                           ? 'bg-info/10 text-info border border-info/20'
+                          : detail.type === 'pow2'
+                          ? 'bg-purple-500/10 text-purple-500 border border-purple-500/20'
                           : 'bg-warning/10 text-warning border border-warning/20'
                       }`}>
                         {detail.type}
                       </span>
                     </div>
-                    {detail.type === 'range' && detail.min != null && detail.max != null ? (
+                    {detail.min != null && detail.max != null ? (
                       <div className="text-sm font-mono text-muted-foreground">
                         {formatNumber(detail.min)}
                         <span className="mx-1.5 text-xs">&ndash;</span>
