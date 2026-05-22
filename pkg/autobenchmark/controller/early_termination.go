@@ -37,15 +37,15 @@ func IsExecutionError(t *abtypes.TrialResult) bool {
 
 // CheckEarlyTermination evaluates whether the trial loop should be stopped
 // based on the configured early termination conditions.
-func CheckEarlyTermination(trials []abtypes.TrialResult, spec *config.EarlyTerminationSpec) EarlyTerminationResult {
-	if spec == nil || len(trials) == 0 {
+func CheckEarlyTermination(trials []abtypes.TrialResult, spec config.EarlyTerminationSpec) EarlyTerminationResult {
+	if len(trials) == 0 {
 		return EarlyTerminationResult{}
 	}
 
 	// Check consecutive execution errors first — NOT gated by MinTrials because
 	// consecutive errors indicate broken templates or cluster issues, not
 	// suboptimal parameter choices.
-	if spec.MaxConsecutiveErrors > 0 {
+	if spec.MaxConsecutiveErrors != nil && *spec.MaxConsecutiveErrors > 0 {
 		consecutive := 0
 		for i := len(trials) - 1; i >= 0; i-- {
 			if IsExecutionError(&trials[i]) {
@@ -54,11 +54,11 @@ func CheckEarlyTermination(trials []abtypes.TrialResult, spec *config.EarlyTermi
 				break
 			}
 		}
-		if consecutive >= spec.MaxConsecutiveErrors {
+		if consecutive >= *spec.MaxConsecutiveErrors {
 			return EarlyTerminationResult{
 				Terminated: true,
 				Reason: fmt.Sprintf("consecutive execution errors reached limit: %d/%d",
-					consecutive, spec.MaxConsecutiveErrors),
+					consecutive, *spec.MaxConsecutiveErrors),
 			}
 		}
 	}
@@ -69,9 +69,13 @@ func CheckEarlyTermination(trials []abtypes.TrialResult, spec *config.EarlyTermi
 	}
 
 	// Check consecutive SLA failures (from the tail of the trial list).
+	// Execution errors are excluded — they are handled by MaxConsecutiveErrors.
 	if spec.MaxConsecutiveSLAFailures > 0 {
 		consecutive := 0
 		for i := len(trials) - 1; i >= 0; i-- {
+			if IsExecutionError(&trials[i]) {
+				break
+			}
 			if !trials[i].IsSLAFeasible() {
 				consecutive++
 			} else {
@@ -87,20 +91,28 @@ func CheckEarlyTermination(trials []abtypes.TrialResult, spec *config.EarlyTermi
 		}
 	}
 
-	// Check overall SLA failure rate.
+	// Check overall SLA failure rate (execution errors excluded).
 	if spec.MaxSLAFailureRate > 0 {
 		failures := 0
+		evaluated := 0
 		for i := range trials {
+			if IsExecutionError(&trials[i]) {
+				continue
+			}
+			evaluated++
 			if !trials[i].IsSLAFeasible() {
 				failures++
 			}
 		}
-		rate := float64(failures) / float64(len(trials))
+		if evaluated == 0 {
+			return EarlyTerminationResult{}
+		}
+		rate := float64(failures) / float64(evaluated)
 		if rate > spec.MaxSLAFailureRate {
 			return EarlyTerminationResult{
 				Terminated: true,
 				Reason: fmt.Sprintf("SLA failure rate exceeded limit: %.2f > %.2f (%d/%d trials failed)",
-					rate, spec.MaxSLAFailureRate, failures, len(trials)),
+					rate, spec.MaxSLAFailureRate, failures, evaluated),
 			}
 		}
 	}

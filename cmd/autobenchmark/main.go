@@ -116,7 +116,9 @@ func run(configPath, namespace, dataDir string, zapOpts *zap.Options) error {
 	stateDir := filepath.Join(expDir, "state")
 	reportDir := expDir
 
-	// Set up file-based logging: write to both stderr and {expDir}/controller.log
+	// Set up file-based logging: write to both stderr and {expDir}/controller.log.
+	// NOTE: ctrl.SetLogger uses a fulfill-once pattern — the second call is a no-op.
+	// Instead we create a new logger and inject it via context.
 	if err := os.MkdirAll(expDir, 0755); err != nil {
 		return fmt.Errorf("creating experiment dir: %w", err)
 	}
@@ -126,11 +128,10 @@ func run(configPath, namespace, dataDir string, zapOpts *zap.Options) error {
 	}
 	defer logFile.Close()
 
-	zapLogger := zap.New(
+	fileLogger := zap.New(
 		zap.UseFlagOptions(zapOpts),
 		zap.WriteTo(io.MultiWriter(os.Stderr, logFile)),
 	)
-	ctrl.SetLogger(zapLogger)
 
 	restCfg, err := ctrl.GetConfig()
 	if err != nil {
@@ -155,7 +156,7 @@ func run(configPath, namespace, dataDir string, zapOpts *zap.Options) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	logger := ctrl.Log.WithName("autobenchmark")
+	logger := fileLogger.WithName("autobenchmark")
 	ctx = log.IntoContext(ctx, logger)
 
 	sigCh := make(chan os.Signal, 1)

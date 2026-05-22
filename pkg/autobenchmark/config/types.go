@@ -112,7 +112,7 @@ type StrategySpec struct {
 
 	// EarlyTermination configures conditions under which the trial loop for a
 	// template is stopped before exhausting all trials.
-	EarlyTermination *EarlyTerminationSpec `yaml:"earlyTermination,omitempty" json:"earlyTermination,omitempty"`
+	EarlyTermination EarlyTerminationSpec `yaml:"earlyTermination,omitempty" json:"earlyTermination,omitempty"`
 
 	// Optuna-specific fields (used when algorithm is an Optuna-backed sampler).
 	Seed            *int                   `yaml:"seed,omitempty" json:"seed,omitempty"`                       // RNG seed for reproducibility
@@ -132,7 +132,7 @@ type EarlyTerminationSpec struct {
 	// caused by suboptimal parameters, consecutive errors typically indicate
 	// broken templates or cluster-level issues. Default: 3.
 	// This check is NOT gated by MinTrials.
-	MaxConsecutiveErrors int `yaml:"maxConsecutiveErrors,omitempty" json:"maxConsecutiveErrors,omitempty"`
+	MaxConsecutiveErrors *int `yaml:"maxConsecutiveErrors,omitempty" json:"maxConsecutiveErrors,omitempty"`
 
 	// MaxSLAFailureRate stops the template's trial loop if the ratio of
 	// SLA-failing trials exceeds this threshold (0, 1].

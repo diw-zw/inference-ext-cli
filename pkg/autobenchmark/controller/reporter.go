@@ -24,8 +24,10 @@ import (
 	"time"
 
 	"go.yaml.in/yaml/v2"
+	sigsyaml "sigs.k8s.io/yaml"
 
 	"sigs.k8s.io/rbgs/cli/pkg/autobenchmark/config"
+	"sigs.k8s.io/rbgs/cli/pkg/autobenchmark/lifecycle"
 	abtypes "sigs.k8s.io/rbgs/cli/pkg/autobenchmark/types"
 )
 
@@ -275,4 +277,39 @@ func WriteResultJSON(dir string, result *ResultDetail) error {
 		return err
 	}
 	return os.WriteFile(filepath.Join(dir, "result.json"), data, 0644)
+}
+
+// writeBestTrialYAML reconstructs the best trial's RBG and writes it as YAML.
+func (ctrl *Controller) writeBestTrialYAML(best *abtypes.TrialResult) error {
+	var tmplPath string
+	for _, t := range ctrl.cfg.Templates {
+		if t.Name == best.TemplateName {
+			tmplPath = t.Template
+			break
+		}
+	}
+	if tmplPath == "" {
+		return fmt.Errorf("template %q not found in config", best.TemplateName)
+	}
+
+	baseRBG, err := lifecycle.LoadTemplate(tmplPath)
+	if err != nil {
+		return fmt.Errorf("loading template %q: %w", best.TemplateName, err)
+	}
+
+	trialRBG, err := ctrl.builder.BuildTrial(baseRBG, best.TrialIndex, best.Params)
+	if err != nil {
+		return fmt.Errorf("building best trial RBG: %w", err)
+	}
+
+	data, err := sigsyaml.Marshal(trialRBG)
+	if err != nil {
+		return fmt.Errorf("marshaling best trial RBG: %w", err)
+	}
+
+	outPath := filepath.Join(ctrl.reportDir, "best_trial.yaml")
+	if err := os.WriteFile(outPath, data, 0644); err != nil {
+		return fmt.Errorf("writing best trial YAML: %w", err)
+	}
+	return nil
 }

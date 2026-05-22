@@ -58,73 +58,76 @@ func TestIsExecutionError(t *testing.T) {
 }
 
 func TestCheckEarlyTermination(t *testing.T) {
+	var numThree = 3
+	var numFive = 5
+
 	tests := []struct {
 		name           string
 		trials         []abtypes.TrialResult
-		spec           *config.EarlyTerminationSpec
+		spec           config.EarlyTerminationSpec
 		wantTerminated bool
 		wantReason     string
 	}{
 		{
 			name:           "nil spec - no termination",
 			trials:         []abtypes.TrialResult{makeTrial(false), makeTrial(false)},
-			spec:           nil,
+			spec:           config.EarlyTerminationSpec{},
 			wantTerminated: false,
 		},
 		{
 			name:           "empty trials - no termination",
 			trials:         nil,
-			spec:           &config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3},
+			spec:           config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3},
 			wantTerminated: false,
 		},
 		{
 			name:           "consecutive failures below threshold",
 			trials:         []abtypes.TrialResult{makeTrial(false), makeTrial(false)},
-			spec:           &config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3},
+			spec:           config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3},
 			wantTerminated: false,
 		},
 		{
 			name:           "consecutive failures at threshold",
 			trials:         []abtypes.TrialResult{makeTrial(true), makeTrial(false), makeTrial(false), makeTrial(false)},
-			spec:           &config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3},
+			spec:           config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3},
 			wantTerminated: true,
 			wantReason:     "consecutive SLA failures reached limit: 3/3",
 		},
 		{
 			name:           "consecutive failures broken by pass",
 			trials:         []abtypes.TrialResult{makeTrial(false), makeTrial(false), makeTrial(true), makeTrial(false)},
-			spec:           &config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3},
+			spec:           config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3},
 			wantTerminated: false,
 		},
 		{
 			name:           "failure rate below threshold",
 			trials:         []abtypes.TrialResult{makeTrial(true), makeTrial(true), makeTrial(false), makeTrial(true)},
-			spec:           &config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5},
+			spec:           config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5},
 			wantTerminated: false,
 		},
 		{
 			name:           "failure rate exceeds threshold",
 			trials:         []abtypes.TrialResult{makeTrial(false), makeTrial(false), makeTrial(false), makeTrial(true)},
-			spec:           &config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5},
+			spec:           config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5},
 			wantTerminated: true,
 			wantReason:     "SLA failure rate exceeded limit: 0.75 > 0.50 (3/4 trials failed)",
 		},
 		{
 			name:           "failure rate at exact threshold - no termination",
 			trials:         []abtypes.TrialResult{makeTrial(false), makeTrial(true)},
-			spec:           &config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5},
+			spec:           config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5},
 			wantTerminated: false,
 		},
 		{
 			name:           "minTrials guards all checks - consecutive would trigger but not enough trials",
 			trials:         []abtypes.TrialResult{makeTrial(false), makeTrial(false), makeTrial(false)},
-			spec:           &config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3, MinTrials: 5},
+			spec:           config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3, MinTrials: 5},
 			wantTerminated: false,
 		},
 		{
 			name:           "minTrials guards all checks - rate would trigger but not enough trials",
 			trials:         []abtypes.TrialResult{makeTrial(false), makeTrial(false)},
-			spec:           &config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5, MinTrials: 5},
+			spec:           config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5, MinTrials: 5},
 			wantTerminated: false,
 		},
 		{
@@ -133,7 +136,7 @@ func TestCheckEarlyTermination(t *testing.T) {
 				makeTrial(true), makeTrial(true),
 				makeTrial(false), makeTrial(false), makeTrial(false),
 			},
-			spec:           &config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3, MinTrials: 5},
+			spec:           config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3, MinTrials: 5},
 			wantTerminated: true,
 			wantReason:     "consecutive SLA failures reached limit: 3/3",
 		},
@@ -142,21 +145,21 @@ func TestCheckEarlyTermination(t *testing.T) {
 			trials: []abtypes.TrialResult{
 				makeTrial(false), makeTrial(false), makeTrial(false), makeTrial(false), makeTrial(true),
 			},
-			spec:           &config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5, MinTrials: 5},
+			spec:           config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5, MinTrials: 5},
 			wantTerminated: true,
 			wantReason:     "SLA failure rate exceeded limit: 0.80 > 0.50 (4/5 trials failed)",
 		},
 		{
 			name:           "no minTrials set - single failure rate triggers immediately",
 			trials:         []abtypes.TrialResult{makeTrial(false)},
-			spec:           &config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5},
+			spec:           config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5},
 			wantTerminated: true,
 			wantReason:     "SLA failure rate exceeded limit: 1.00 > 0.50 (1/1 trials failed)",
 		},
 		{
 			name:           "both conditions - consecutive triggers first",
 			trials:         []abtypes.TrialResult{makeTrial(false), makeTrial(false), makeTrial(false)},
-			spec:           &config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3, MaxSLAFailureRate: 0.5},
+			spec:           config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3, MaxSLAFailureRate: 0.5},
 			wantTerminated: true,
 			wantReason:     "consecutive SLA failures reached limit: 3/3",
 		},
@@ -166,7 +169,7 @@ func TestCheckEarlyTermination(t *testing.T) {
 				makeTrial(false), makeTrial(false), makeTrial(true),
 				makeTrial(false), makeTrial(false),
 			},
-			spec:           &config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3, MaxSLAFailureRate: 0.5},
+			spec:           config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3, MaxSLAFailureRate: 0.5},
 			wantTerminated: true,
 			wantReason:     "SLA failure rate exceeded limit: 0.80 > 0.50 (4/5 trials failed)",
 		},
@@ -174,32 +177,32 @@ func TestCheckEarlyTermination(t *testing.T) {
 		{
 			name:           "consecutive errors below threshold",
 			trials:         []abtypes.TrialResult{makeErrorTrial(), makeErrorTrial()},
-			spec:           &config.EarlyTerminationSpec{MaxConsecutiveErrors: 3},
+			spec:           config.EarlyTerminationSpec{MaxConsecutiveErrors: &numThree},
 			wantTerminated: false,
 		},
 		{
 			name:           "consecutive errors at threshold",
 			trials:         []abtypes.TrialResult{makeTrial(true), makeErrorTrial(), makeErrorTrial(), makeErrorTrial()},
-			spec:           &config.EarlyTerminationSpec{MaxConsecutiveErrors: 3},
+			spec:           config.EarlyTerminationSpec{MaxConsecutiveErrors: &numThree},
 			wantTerminated: true,
 			wantReason:     "consecutive execution errors reached limit: 3/3",
 		},
 		{
 			name:           "consecutive errors broken by success",
 			trials:         []abtypes.TrialResult{makeErrorTrial(), makeErrorTrial(), makeTrial(true), makeErrorTrial()},
-			spec:           &config.EarlyTerminationSpec{MaxConsecutiveErrors: 3},
+			spec:           config.EarlyTerminationSpec{MaxConsecutiveErrors: &numThree},
 			wantTerminated: false,
 		},
 		{
 			name:           "consecutive errors broken by SLA failure (not an execution error)",
 			trials:         []abtypes.TrialResult{makeErrorTrial(), makeErrorTrial(), makeTrial(false), makeErrorTrial()},
-			spec:           &config.EarlyTerminationSpec{MaxConsecutiveErrors: 3},
+			spec:           config.EarlyTerminationSpec{MaxConsecutiveErrors: &numThree},
 			wantTerminated: false,
 		},
 		{
 			name:           "consecutive errors NOT gated by minTrials",
 			trials:         []abtypes.TrialResult{makeErrorTrial(), makeErrorTrial(), makeErrorTrial()},
-			spec:           &config.EarlyTerminationSpec{MaxConsecutiveErrors: 3, MinTrials: 10},
+			spec:           config.EarlyTerminationSpec{MaxConsecutiveErrors: &numThree, MinTrials: 10},
 			wantTerminated: true,
 			wantReason:     "consecutive execution errors reached limit: 3/3",
 		},
@@ -208,9 +211,44 @@ func TestCheckEarlyTermination(t *testing.T) {
 			trials: []abtypes.TrialResult{
 				makeErrorTrial(), makeErrorTrial(), makeErrorTrial(),
 			},
-			spec:           &config.EarlyTerminationSpec{MaxConsecutiveErrors: 3, MaxConsecutiveSLAFailures: 3},
+			spec:           config.EarlyTerminationSpec{MaxConsecutiveErrors: &numThree, MaxConsecutiveSLAFailures: 3},
 			wantTerminated: true,
 			wantReason:     "consecutive execution errors reached limit: 3/3",
+		},
+		// --- Execution errors excluded from SLA checks ---
+		{
+			name: "execution errors do not count toward consecutive SLA failures",
+			trials: []abtypes.TrialResult{
+				makeTrial(true), makeErrorTrial(), makeErrorTrial(), makeErrorTrial(),
+			},
+			spec:           config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3, MaxConsecutiveErrors: &numFive},
+			wantTerminated: false,
+		},
+		{
+			name: "execution errors excluded from SLA failure rate",
+			trials: []abtypes.TrialResult{
+				makeTrial(false), makeErrorTrial(), makeErrorTrial(), makeTrial(true),
+			},
+			spec:           config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5, MaxConsecutiveErrors: &numFive},
+			wantTerminated: false,
+			wantReason:     "",
+		},
+		{
+			name: "SLA failure rate computed over non-error trials only",
+			trials: []abtypes.TrialResult{
+				makeTrial(false), makeTrial(false), makeErrorTrial(), makeTrial(true),
+			},
+			spec:           config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5, MaxConsecutiveErrors: &numFive},
+			wantTerminated: true,
+			wantReason:     "SLA failure rate exceeded limit: 0.67 > 0.50 (2/3 trials failed)",
+		},
+		{
+			name: "all trials are execution errors - SLA rate check skipped",
+			trials: []abtypes.TrialResult{
+				makeErrorTrial(), makeErrorTrial(),
+			},
+			spec:           config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5, MaxConsecutiveErrors: &numFive},
+			wantTerminated: false,
 		},
 	}
 
