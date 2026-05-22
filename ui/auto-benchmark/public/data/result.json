@@ -20,14 +20,8 @@
       "errorRateMax": 0.01
     },
     "scenarioName": "chat",
-    "scenarioWorkloads": [
-      "normal(512,256/2048,1024)"
-    ],
-    "scenarioConcurrency": [
-      64,
-      128,
-      256
-    ],
+    "scenarioWorkload": "normal(512,256/2048,1024)",
+    "scenarioConcurrency": 64,
     "maxTrialsPerTemplate": 20,
     "timeout": "4h",
     "templates": [

@@ -82,33 +82,17 @@ func (g *GenAIBench) Run(ctx context.Context, evalCtx EvalContext) error {
 		// genai-bench does not expose a "benchmark-only" mode; after all benchmark
 		// runs finish it unconditionally generates Excel/plots, which can fail in
 		// container environments (e.g. PVC without random-write support). Since
-		// genai-bench writes one result JSON per (scenario × concurrency) immediately
-		// after each run completes, we use the file count as an indirect indicator:
-		// all expected JSONs present ⇒ benchmarks finished, failure is post-benchmark.
-		expected := expectedResultCount(evalCtx.Scenario)
-		actual := countResultJSON(evalCtx.OutputDir)
-		if actual >= expected {
-			logger.Info("genai-bench exited with error but all result files exist, treating as non-fatal",
-				"error", err, "expectedFiles", expected, "actualFiles", actual)
+		// genai-bench writes result JSON immediately after each run completes, we
+		// check whether at least one result JSON exists: if so, the benchmark
+		// produced usable output and the failure is post-benchmark.
+		resultsNum := countResultJSON(evalCtx.OutputDir)
+		if resultsNum > 0 {
+			logger.Info("genai-bench exited with error but result files exist, treating as non-fatal", "error", err)
 		} else {
-			return fmt.Errorf("genai-bench failed (expected %d result files, found %d): %w", expected, actual, err)
+			return fmt.Errorf("genai-bench failed: %w", err)
 		}
 	}
 	return nil
-}
-
-// expectedResultCount returns the number of result JSON files genai-bench
-// should produce: one per (workload × concurrency) combination.
-func expectedResultCount(scenario config.ScenarioSpec) int {
-	w := len(scenario.Workloads)
-	c := len(scenario.Concurrency)
-	if w == 0 {
-		w = 1
-	}
-	if c == 0 {
-		c = 1
-	}
-	return w * c
 }
 
 // countResultJSON counts benchmark result JSON files in dir,
@@ -258,14 +242,14 @@ func (g *GenAIBench) buildGenAIBenchArgs(evalCtx EvalContext) []string {
 		"--task", "text-to-text",
 	}
 
-	// Translate workloads to genai-bench traffic scenarios
-	for _, w := range scenario.Workloads {
-		ts := translateWorkload(w)
+	// Translate workload to genai-bench traffic scenario
+	if scenario.Workload != "" {
+		ts := translateWorkload(scenario.Workload)
 		args = append(args, "--traffic-scenario", ts)
 	}
 
-	for _, c := range scenario.Concurrency {
-		args = append(args, "--num-concurrency", strconv.Itoa(c))
+	if scenario.Concurrency > 0 {
+		args = append(args, "--num-concurrency", strconv.Itoa(scenario.Concurrency))
 	}
 
 	// Duration -> --max-time-per-run (in minutes)

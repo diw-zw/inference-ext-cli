@@ -157,8 +157,8 @@ type ResultConfig struct {
 	Optimize            string            `json:"optimize"`
 	SLA                 ResultSLA         `json:"sla"`
 	ScenarioName        string            `json:"scenarioName"`
-	ScenarioWorkloads   []string          `json:"scenarioWorkloads,omitempty"`
-	ScenarioConcurrency []int             `json:"scenarioConcurrency,omitempty"`
+	ScenarioWorkload    string            `json:"scenarioWorkload"`
+	ScenarioConcurrency int               `json:"scenarioConcurrency"`
 	MaxTrialsPerTmpl    int               `json:"maxTrialsPerTemplate"`
 	Timeout             string            `json:"timeout,omitempty"`
 	Templates           []string          `json:"templates"`
@@ -226,7 +226,7 @@ func BuildResult(state *abtypes.ExperimentState, cfg *config.AutoBenchmarkConfig
 	result.Config.SLA.TPOTP99MaxMs = cfg.Objectives.SLA.TPOTP99MaxMs
 	result.Config.SLA.ErrorRateMax = cfg.Objectives.SLA.ErrorRateMax
 	result.Config.ScenarioName = cfg.Scenario.Name
-	result.Config.ScenarioWorkloads = cfg.Scenario.Workloads
+	result.Config.ScenarioWorkload = cfg.Scenario.Workload
 	result.Config.ScenarioConcurrency = cfg.Scenario.Concurrency
 	result.Config.MaxTrialsPerTmpl = cfg.Strategy.MaxTrialsPerTemplate
 	result.Config.Timeout = cfg.Strategy.Timeout

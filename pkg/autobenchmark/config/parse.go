@@ -139,16 +139,13 @@ func validateSearchSpace(cfg *AutoBenchmarkConfig) []string {
 
 func validateScenario(cfg *AutoBenchmarkConfig) []string {
 	var errs []string
-	if len(cfg.Scenario.Workloads) == 0 {
-		errs = append(errs, "scenario.workloads: at least one is required")
+	if cfg.Scenario.Workload == "" {
+		errs = append(errs, "scenario.workload: is required")
+	} else if err := ValidateWorkload(cfg.Scenario.Workload); err != nil {
+		errs = append(errs, fmt.Sprintf("scenario.workload: %v", err))
 	}
-	for i, w := range cfg.Scenario.Workloads {
-		if err := ValidateWorkload(w); err != nil {
-			errs = append(errs, fmt.Sprintf("scenario.workloads[%d]: %v", i, err))
-		}
-	}
-	if len(cfg.Scenario.Concurrency) == 0 {
-		errs = append(errs, "scenario.concurrency: at least one is required")
+	if cfg.Scenario.Concurrency <= 0 {
+		errs = append(errs, "scenario.concurrency: must be positive")
 	}
 	if cfg.Scenario.Duration != "" {
 		if _, err := time.ParseDuration(cfg.Scenario.Duration); err != nil {

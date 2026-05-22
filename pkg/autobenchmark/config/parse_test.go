@@ -48,8 +48,8 @@ searchSpace:
 
 scenario:
   name: "test-load"
-  workloads: ["fixed(512,256)"]
-  concurrency: [16, 32]
+  workload: "fixed(512,256)"
+  concurrency: 16
   duration: "10m"
 
 objectives:
@@ -108,8 +108,8 @@ searchSpace:
       values: [1, 2]
 scenario:
   name: "s"
-  workloads: ["fixed(100,50)"]
-  concurrency: [1]
+  workload: "fixed(100,50)"
+  concurrency: 1
 objectives:
   optimize: "outputThroughput"
 evaluator:
@@ -377,10 +377,10 @@ func TestValidate_StrategyMaxTrialsNonPositive(t *testing.T) {
 func TestValidate_ScenarioMissingFields(t *testing.T) {
 	cfg, err := Parse([]byte(fullValidConfig()))
 	require.NoError(t, err)
-	cfg.Scenario.Workloads = nil
+	cfg.Scenario.Workload = ""
 	err = Validate(cfg, false)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "scenario.workloads: at least one is required")
+	assert.Contains(t, err.Error(), "scenario.workload: is required")
 }
 
 func TestValidate_FullValidConfig(t *testing.T) {
@@ -475,8 +475,8 @@ searchSpace:
       step: 128
 scenario:
   name: "s"
-  workloads: ["fixed(100,50)"]
-  concurrency: [1]
+  workload: "fixed(100,50)"
+  concurrency: 1
 objectives:
   optimize: "outputThroughput"
 evaluator:

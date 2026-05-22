@@ -24,9 +24,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install genai-bench and optuna from PyPI
+# Install genai-bench, inference-perf, and optuna from PyPI
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir genai-bench optuna
+    pip install --no-cache-dir genai-bench inference-perf optuna
 
 # Copy optuna bridge script
 COPY tools/optuna/optuna_bridge.py /tools/optuna_bridge.py

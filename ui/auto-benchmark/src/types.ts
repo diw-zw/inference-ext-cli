@@ -71,8 +71,8 @@ export interface ResultConfig {
   optimize: string
   sla: ResultSLA
   scenarioName: string
-  scenarioWorkloads: string[]
-  scenarioConcurrency: number[]
+  scenarioWorkload: string
+  scenarioConcurrency: number
   maxTrialsPerTemplate: number
   earlyStopPatience: number
   timeout: string

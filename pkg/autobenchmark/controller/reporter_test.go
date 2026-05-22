@@ -194,8 +194,8 @@ func TestBuildResult(t *testing.T) {
 		},
 		Scenario: config.ScenarioSpec{
 			Name:        "smoke",
-			Workloads:   []string{"fixed(128,10)"},
-			Concurrency: []int{4},
+			Workload:    "fixed(128,10)",
+			Concurrency: 4,
 		},
 		Templates: []config.TemplateRef{
 			{Name: "tp"},
@@ -260,8 +260,8 @@ func TestBuildResult(t *testing.T) {
 		assert.InDelta(t, 50, *result.Config.SLA.TPOTP99MaxMs, 0.01)
 		assert.Nil(t, result.Config.SLA.ErrorRateMax)
 		assert.Equal(t, "smoke", result.Config.ScenarioName)
-		assert.Equal(t, []string{"fixed(128,10)"}, result.Config.ScenarioWorkloads)
-		assert.Equal(t, []int{4}, result.Config.ScenarioConcurrency)
+		assert.Equal(t, "fixed(128,10)", result.Config.ScenarioWorkload)
+		assert.Equal(t, 4, result.Config.ScenarioConcurrency)
 		assert.Equal(t, 10, result.Config.MaxTrialsPerTmpl)
 		assert.Equal(t, "1h", result.Config.Timeout)
 		assert.Equal(t, []string{"tp", "pp"}, result.Config.Templates)

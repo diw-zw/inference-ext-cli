@@ -48,8 +48,8 @@ func TestBuildGenAIBenchArgs(t *testing.T) {
 				ModelName: "my-model",
 				Scenario: config.ScenarioSpec{
 					Name:        "test-scenario",
-					Workloads:   []string{"fixed(100,1000)"},
-					Concurrency: []int{4},
+					Workload:    "fixed(100,1000)",
+					Concurrency: 4,
 				},
 			},
 			expected: []string{
@@ -74,7 +74,7 @@ func TestBuildGenAIBenchArgs(t *testing.T) {
 				ModelName: "my-model",
 				Scenario: config.ScenarioSpec{
 					Name:        "s1",
-					Concurrency: []int{1},
+					Concurrency: 1,
 				},
 				OutputDir: "/data/results/scenario/trial-0",
 			},
@@ -91,7 +91,7 @@ func TestBuildGenAIBenchArgs(t *testing.T) {
 				ModelName: "my-model",
 				Scenario: config.ScenarioSpec{
 					Name:        "s1",
-					Concurrency: []int{1},
+					Concurrency: 1,
 				},
 			},
 			expected: []string{
@@ -99,23 +99,21 @@ func TestBuildGenAIBenchArgs(t *testing.T) {
 			},
 		},
 		{
-			name: "workload translation and limits",
+			name: "duration and maxRequests",
 			evalCtx: EvalContext{
 				Endpoint:  "http://svc:8000",
 				ModelName: "my-model",
 				Scenario: config.ScenarioSpec{
-					Name:        "multi-wl",
-					Workloads:   []string{"fixed(100,1000)", "normal(480,240/300,150)"},
-					Concurrency: []int{4, 8},
+					Name:        "s1",
+					Workload:    "fixed(100,1000)",
+					Concurrency: 4,
 					Duration:    "2m",
 					MaxRequests: 1000,
 				},
 			},
 			expected: []string{
 				"--traffic-scenario", "D(100,1000)",
-				"--traffic-scenario", "N(480,240)/(300,150)",
 				"--num-concurrency", "4",
-				"--num-concurrency", "8",
 				"--max-time-per-run", "2",
 				"--max-requests-per-run", "1000",
 			},
@@ -127,8 +125,8 @@ func TestBuildGenAIBenchArgs(t *testing.T) {
 				ModelName: "my-model",
 				Scenario: config.ScenarioSpec{
 					Name:        "s1",
-					Workloads:   []string{"uniform(100,500/200,800)"},
-					Concurrency: []int{4},
+					Workload:    "uniform(100,500/200,800)",
+					Concurrency: 4,
 				},
 			},
 			expected: []string{
@@ -142,29 +140,12 @@ func TestBuildGenAIBenchArgs(t *testing.T) {
 				ModelName: "my-model",
 				Scenario: config.ScenarioSpec{
 					Name:        "s1",
-					Workloads:   []string{"dataset"},
-					Concurrency: []int{4},
+					Workload:    "dataset",
+					Concurrency: 4,
 				},
 			},
 			expected: []string{
 				"--traffic-scenario", "dataset",
-			},
-		},
-		{
-			name: "multiple concurrency values",
-			evalCtx: EvalContext{
-				Endpoint:  "http://svc:8000",
-				ModelName: "my-model",
-				Scenario: config.ScenarioSpec{
-					Name:        "s1",
-					Concurrency: []int{1, 2, 4, 8},
-				},
-			},
-			expected: []string{
-				"--num-concurrency", "1",
-				"--num-concurrency", "2",
-				"--num-concurrency", "4",
-				"--num-concurrency", "8",
 			},
 		},
 		{
@@ -174,7 +155,7 @@ func TestBuildGenAIBenchArgs(t *testing.T) {
 				ModelName: "my-model",
 				Scenario: config.ScenarioSpec{
 					Name:        "s1",
-					Concurrency: []int{4},
+					Concurrency: 4,
 					Duration:    "30s",
 				},
 			},
@@ -190,7 +171,7 @@ func TestBuildGenAIBenchArgs(t *testing.T) {
 				Backend:   "vllm",
 				Scenario: config.ScenarioSpec{
 					Name:        "s1",
-					Concurrency: []int{4},
+					Concurrency: 4,
 				},
 			},
 			expected: []string{
@@ -207,7 +188,7 @@ func TestBuildGenAIBenchArgs(t *testing.T) {
 				ModelName: "my-model",
 				Scenario: config.ScenarioSpec{
 					Name:        "s1",
-					Concurrency: []int{4},
+					Concurrency: 4,
 				},
 			},
 			expected: []string{

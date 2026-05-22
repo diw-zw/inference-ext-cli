@@ -84,11 +84,11 @@ type SearchParam struct {
 // Fields use project-own generic syntax; each evaluator plugin translates them
 // to its own CLI format (e.g. genai-bench D/N/U notation).
 type ScenarioSpec struct {
-	Name        string   `yaml:"name" json:"name"`
-	Workloads   []string `yaml:"workloads" json:"workloads"`                         // project-own syntax: fixed(in,out), normal(μ_in,σ_in/μ_out,σ_out), uniform(min,max/min,max), dataset
-	Concurrency []int    `yaml:"concurrency" json:"concurrency"`                     // list of concurrency levels to test
-	Duration    string   `yaml:"duration,omitempty" json:"duration,omitempty"`       // Go duration string, e.g. "2m", "30s"
-	MaxRequests int      `yaml:"maxRequests,omitempty" json:"maxRequests,omitempty"` // max requests per run
+	Name        string `yaml:"name" json:"name"`
+	Workload    string `yaml:"workload" json:"workload"`                           // project-own syntax: fixed(in,out), normal(μ_in,σ_in/μ_out,σ_out), uniform(min,max/min,max), dataset
+	Concurrency int    `yaml:"concurrency" json:"concurrency"`                     // concurrency level
+	Duration    string `yaml:"duration,omitempty" json:"duration,omitempty"`       // Go duration string, e.g. "2m", "30s"
+	MaxRequests int    `yaml:"maxRequests,omitempty" json:"maxRequests,omitempty"` // max requests per run
 }
 
 // ObjectivesSpec defines SLA constraints and the optimization target.

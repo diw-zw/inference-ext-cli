@@ -43,8 +43,8 @@ export function ConfigView({ config }: ConfigViewProps) {
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <ConfigItem label="Scenario" value={config.scenarioName} />
-            <ConfigItem label="Workloads" value={config.scenarioWorkloads.join(', ')} />
-            <ConfigItem label="Concurrency" value={config.scenarioConcurrency.join(', ')} />
+            <ConfigItem label="Workload" value={config.scenarioWorkload} />
+            <ConfigItem label="Concurrency" value={String(config.scenarioConcurrency)} />
             <ConfigItem label="Templates" value={config.templates.join(', ')} />
           </div>
         </CardContent>
