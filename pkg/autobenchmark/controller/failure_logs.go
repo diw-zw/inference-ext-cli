@@ -25,10 +25,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"sigs.k8s.io/rbgs/api/workloads/constants"
 	abtypes "sigs.k8s.io/rbgs/cli/pkg/autobenchmark/types"
@@ -41,14 +41,18 @@ type podRestartSnapshot map[string]int32
 
 // snapshotRestartCounts records the current RestartCount of every container
 // across all pods belonging to the trial RBG. Returns nil on any error.
-func (ctrl *Controller) snapshotRestartCounts(trialName string) podRestartSnapshot {
+func (ctrl *Controller) snapshotRestartCounts(logger logr.Logger, trialName string) podRestartSnapshot {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	podList, err := ctrl.clientset.CoreV1().Pods(ctrl.namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: labels.Set{constants.GroupNameLabelKey: trialName}.String(),
 	})
-	if err != nil || len(podList.Items) == 0 {
+	if err != nil {
+		logger.Info("Failed to snapshot restart counts", "error", err.Error())
+		return nil
+	}
+	if len(podList.Items) == 0 {
 		return nil
 	}
 
@@ -67,11 +71,11 @@ func (ctrl *Controller) snapshotRestartCounts(trialName string) podRestartSnapsh
 //   - Pod in Failed phase → collect current logs (before RBG controller deletes it)
 //   - Pod Running but RestartCount increased → collect previous container logs
 //   - Neither → benchmark tool's own problem, skip
-func (ctrl *Controller) collectBenchmarkFailureLogs(trialName string, resultDir string, preRunRestarts podRestartSnapshot) {
+func (ctrl *Controller) collectBenchmarkFailureLogs(logger logr.Logger, trialName string, resultDir string, preRunRestarts podRestartSnapshot) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	logger := log.FromContext(ctx).WithValues("trialName", trialName)
+	logger = logger.WithValues("trialName", trialName)
 
 	podList, err := ctrl.clientset.CoreV1().Pods(ctrl.namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: labels.Set{constants.GroupNameLabelKey: trialName}.String(),
@@ -124,11 +128,11 @@ func (ctrl *Controller) collectBenchmarkFailureLogs(trialName string, resultDir 
 // directly to result.Error. For pods that did run, it writes the last N lines
 // of container logs to {resultDir}/pod-logs/{podName}.log.
 // Errors during collection are logged but never propagated.
-func (ctrl *Controller) collectFailureLogs(trialName string, resultDir string, result *abtypes.TrialResult) {
+func (ctrl *Controller) collectFailureLogs(logger logr.Logger, trialName string, resultDir string, result *abtypes.TrialResult) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	logger := log.FromContext(ctx).WithValues("trialName", trialName)
+	logger = logger.WithValues("trialName", trialName)
 
 	podList, err := ctrl.clientset.CoreV1().Pods(ctrl.namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: labels.Set{constants.GroupNameLabelKey: trialName}.String(),

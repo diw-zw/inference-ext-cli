@@ -108,10 +108,10 @@ func CheckEarlyTermination(trials []abtypes.TrialResult, spec config.EarlyTermin
 			return EarlyTerminationResult{}
 		}
 		rate := float64(failures) / float64(evaluated)
-		if rate > spec.MaxSLAFailureRate {
+		if rate >= spec.MaxSLAFailureRate {
 			return EarlyTerminationResult{
 				Terminated: true,
-				Reason: fmt.Sprintf("SLA failure rate exceeded limit: %.2f > %.2f (%d/%d trials failed)",
+				Reason: fmt.Sprintf("SLA failure rate exceeded limit: %.2f >= %.2f (%d/%d trials failed)",
 					rate, spec.MaxSLAFailureRate, failures, evaluated),
 			}
 		}

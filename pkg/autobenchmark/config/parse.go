@@ -197,6 +197,9 @@ func validateStrategy(cfg *AutoBenchmarkConfig) []string {
 	if et.MinTrials < 0 {
 		errs = append(errs, "strategy.earlyTermination.minTrials: must not be negative")
 	}
+	if et.MinTrials > 0 && et.MinTrials > cfg.Strategy.MaxTrialsPerTemplate {
+		errs = append(errs, "strategy.earlyTermination.minTrials: must not exceed strategy.maxTrialsPerTemplate")
+	}
 
 	return errs
 }

@@ -49,6 +49,7 @@ searchSpace:
 scenario:
   name: "test-load"
   workload: "fixed(512,256)"
+  maxRequests: 100
   concurrency: 16
   duration: "10m"
 
@@ -476,6 +477,7 @@ searchSpace:
 scenario:
   name: "s"
   workload: "fixed(100,50)"
+  maxRequests: 50
   concurrency: 1
 objectives:
   optimize: "outputThroughput"

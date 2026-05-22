@@ -63,8 +63,11 @@ func BuildReport(state *abtypes.ExperimentState) *Report {
 			BestTrial: ts.BestTrial,
 			NumTrials: len(ts.Trials),
 		}
-		for _, trial := range ts.Trials {
-			if trial.IsSLAFeasible() {
+		for i := range ts.Trials {
+			if IsExecutionError(&ts.Trials[i]) {
+				continue
+			}
+			if ts.Trials[i].IsSLAFeasible() {
 				tr.NumSLAPass++
 			}
 		}
@@ -211,8 +214,11 @@ func BuildResult(state *abtypes.ExperimentState, cfg *config.AutoBenchmarkConfig
 
 	for _, ts := range state.Templates {
 		result.Status.TotalTrials += len(ts.Trials)
-		for _, trial := range ts.Trials {
-			if trial.IsSLAFeasible() {
+		for i := range ts.Trials {
+			if IsExecutionError(&ts.Trials[i]) {
+				continue
+			}
+			if ts.Trials[i].IsSLAFeasible() {
 				result.Status.NumSLAPass++
 			} else {
 				result.Status.NumSLAFail++

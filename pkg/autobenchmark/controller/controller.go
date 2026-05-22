@@ -393,7 +393,7 @@ func (ctrl *Controller) executeTrial(
 
 		scenario := ctrl.cfg.Scenario
 		resultDir := filepath.Join(ctrl.reportDir, scenario.Name, templateName, fmt.Sprintf("trial-%d", trialIdx))
-		ctrl.collectFailureLogs(trialName, resultDir, &result)
+		ctrl.collectFailureLogs(logger, trialName, resultDir, &result)
 		return result
 	}
 	modelName := extractServedModelName(baseRBG, ctrl.cfg.Backend)
@@ -403,7 +403,7 @@ func (ctrl *Controller) executeTrial(
 	resultDir := filepath.Join(ctrl.reportDir, scenario.Name, templateName, fmt.Sprintf("trial-%d", trialIdx))
 
 	// Snapshot pod restart counts before benchmark so we can detect mid-run crashes.
-	preRunRestarts := ctrl.snapshotRestartCounts(trialName)
+	preRunRestarts := ctrl.snapshotRestartCounts(logger, trialName)
 
 	// Run benchmark in-process
 	evalCtx := evaluator.EvalContext{
@@ -419,7 +419,7 @@ func (ctrl *Controller) executeTrial(
 		result.EndTime = time.Now()
 		result.Duration = abtypes.Duration(result.EndTime.Sub(start))
 		ctrl.annotateTrialTimeout(&result, trialCtx)
-		ctrl.collectBenchmarkFailureLogs(trialName, resultDir, preRunRestarts)
+		ctrl.collectBenchmarkFailureLogs(logger, trialName, resultDir, preRunRestarts)
 		return result
 	}
 

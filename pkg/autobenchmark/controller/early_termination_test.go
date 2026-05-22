@@ -57,6 +57,31 @@ func TestIsExecutionError(t *testing.T) {
 	}
 }
 
+func TestIsSLAFeasible(t *testing.T) {
+	tests := []struct {
+		name  string
+		trial abtypes.TrialResult
+		want  bool
+	}{
+		{"feasible - all constraints satisfied", abtypes.TrialResult{Constraints: []float64{0, 0}}, true},
+		{"feasible - negative constraints", abtypes.TrialResult{Constraints: []float64{-1, -0.5}}, true},
+		{"feasible - empty constraints", abtypes.TrialResult{}, true},
+		{"infeasible - constraint violated", abtypes.TrialResult{Constraints: []float64{0.5, 0}}, false},
+		{"infeasible - error with passing constraints", abtypes.TrialResult{
+			Error:       "benchmark failed: timeout",
+			Constraints: []float64{0, 0},
+		}, false},
+		{"infeasible - error with no constraints", abtypes.TrialResult{
+			Error: "RBG not ready",
+		}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.trial.IsSLAFeasible())
+		})
+	}
+}
+
 func TestCheckEarlyTermination(t *testing.T) {
 	var numThree = 3
 	var numFive = 5
@@ -110,13 +135,14 @@ func TestCheckEarlyTermination(t *testing.T) {
 			trials:         []abtypes.TrialResult{makeTrial(false), makeTrial(false), makeTrial(false), makeTrial(true)},
 			spec:           config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5},
 			wantTerminated: true,
-			wantReason:     "SLA failure rate exceeded limit: 0.75 > 0.50 (3/4 trials failed)",
+			wantReason:     "SLA failure rate exceeded limit: 0.75 >= 0.50 (3/4 trials failed)",
 		},
 		{
-			name:           "failure rate at exact threshold - no termination",
+			name:           "failure rate at exact threshold - termination",
 			trials:         []abtypes.TrialResult{makeTrial(false), makeTrial(true)},
 			spec:           config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5},
-			wantTerminated: false,
+			wantTerminated: true,
+			wantReason:     "SLA failure rate exceeded limit: 0.50 >= 0.50 (1/2 trials failed)",
 		},
 		{
 			name:           "minTrials guards all checks - consecutive would trigger but not enough trials",
@@ -147,14 +173,14 @@ func TestCheckEarlyTermination(t *testing.T) {
 			},
 			spec:           config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5, MinTrials: 5},
 			wantTerminated: true,
-			wantReason:     "SLA failure rate exceeded limit: 0.80 > 0.50 (4/5 trials failed)",
+			wantReason:     "SLA failure rate exceeded limit: 0.80 >= 0.50 (4/5 trials failed)",
 		},
 		{
 			name:           "no minTrials set - single failure rate triggers immediately",
 			trials:         []abtypes.TrialResult{makeTrial(false)},
 			spec:           config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5},
 			wantTerminated: true,
-			wantReason:     "SLA failure rate exceeded limit: 1.00 > 0.50 (1/1 trials failed)",
+			wantReason:     "SLA failure rate exceeded limit: 1.00 >= 0.50 (1/1 trials failed)",
 		},
 		{
 			name:           "both conditions - consecutive triggers first",
@@ -171,7 +197,7 @@ func TestCheckEarlyTermination(t *testing.T) {
 			},
 			spec:           config.EarlyTerminationSpec{MaxConsecutiveSLAFailures: 3, MaxSLAFailureRate: 0.5},
 			wantTerminated: true,
-			wantReason:     "SLA failure rate exceeded limit: 0.80 > 0.50 (4/5 trials failed)",
+			wantReason:     "SLA failure rate exceeded limit: 0.80 >= 0.50 (4/5 trials failed)",
 		},
 		// --- MaxConsecutiveErrors tests ---
 		{
@@ -227,7 +253,7 @@ func TestCheckEarlyTermination(t *testing.T) {
 		{
 			name: "execution errors excluded from SLA failure rate",
 			trials: []abtypes.TrialResult{
-				makeTrial(false), makeErrorTrial(), makeErrorTrial(), makeTrial(true),
+				makeTrial(false), makeErrorTrial(), makeErrorTrial(), makeTrial(true), makeTrial(true),
 			},
 			spec:           config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5, MaxConsecutiveErrors: &numFive},
 			wantTerminated: false,
@@ -240,7 +266,7 @@ func TestCheckEarlyTermination(t *testing.T) {
 			},
 			spec:           config.EarlyTerminationSpec{MaxSLAFailureRate: 0.5, MaxConsecutiveErrors: &numFive},
 			wantTerminated: true,
-			wantReason:     "SLA failure rate exceeded limit: 0.67 > 0.50 (2/3 trials failed)",
+			wantReason:     "SLA failure rate exceeded limit: 0.67 >= 0.50 (2/3 trials failed)",
 		},
 		{
 			name: "all trials are execution errors - SLA rate check skipped",
