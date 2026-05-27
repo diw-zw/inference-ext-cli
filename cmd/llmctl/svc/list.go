@@ -52,7 +52,7 @@ func newListCmd(cf *genericclioptions.ConfigFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list [flags]",
 		Short: "List LLM inference services created by the CLI",
-		Long: `List RoleBasedGroup resources created by 'kubectl rbg llm svc run'.
+		Long: `List RoleBasedGroup resources created by 'llmctl svc run'.
 
 This command displays all LLM inference services that were created using the CLI.
 It shows information such as the service name, model, engine, mode, replicas, and status.
@@ -60,16 +60,16 @@ It shows information such as the service name, model, engine, mode, replicas, an
 The command filters RoleBasedGroups by the CLI source label to only show resources
 managed by the kubectl-rbg CLI tool.`,
 		Example: `  # List services in current namespace
-  kubectl rbg llm svc list
+  llmctl svc list
 
   # List services in all namespaces
-  kubectl rbg llm svc list -A
+  llmctl svc list -A
 
   # List services in a specific namespace
-  kubectl rbg llm svc list -n kubeai
+  llmctl svc list -n kubeai
 
   # Filter by label selector
-  kubectl rbg llm svc list -l app.kubernetes.io/name=my-qwen`,
+  llmctl svc list -l app.kubernetes.io/name=my-qwen`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			rbgClient, err := util.GetControllerRuntimeClient(cf)
 			if err != nil {

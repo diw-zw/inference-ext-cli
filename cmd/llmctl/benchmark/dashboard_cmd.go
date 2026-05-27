@@ -77,13 +77,13 @@ local machine. A browser window will open to view the results.
 
 Press Ctrl+C to stop the dashboard and clean up resources.`,
 		Example: `  # Start the dashboard to browse benchmark results
-  kubectl rbg llm benchmark dashboard --experiment-base-dir pvc://benchmark-output/rbg-benchmark
+  llmctl benchmark dashboard --experiment-base-dir pvc://benchmark-output/rbg-benchmark
 
   # Use a custom local port
-  kubectl rbg llm benchmark dashboard --experiment-base-dir pvc://benchmark-output/rbg-benchmark --port 9000
+  llmctl benchmark dashboard --experiment-base-dir pvc://benchmark-output/rbg-benchmark --port 9000
 
   # Don't automatically open the browser
-  kubectl rbg llm benchmark dashboard --experiment-base-dir pvc://benchmark-output/rbg-benchmark --open-browser=false`,
+  llmctl benchmark dashboard --experiment-base-dir pvc://benchmark-output/rbg-benchmark --open-browser=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runDashboard(cmd.Context())
 		},

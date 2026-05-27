@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `kubectl rbg llm model` command group manages LLM model assets in configured storage. It supports pulling models from sources (HuggingFace, ModelScope) and listing downloaded models.
+The `llmctl model` command group manages LLM model assets in configured storage. It supports pulling models from sources (HuggingFace, ModelScope) and listing downloaded models.
 
 ## Prerequisites
 
@@ -12,11 +12,11 @@ The `kubectl rbg llm model` command group manages LLM model assets in configured
 
    ```bash
    # Interactive wizard
-   kubectl rbg llm config init
+   llmctl config init
 
    # Or configure manually
-   kubectl rbg llm config add-storage my-pvc --type pvc --config pvcName=model-pvc
-   kubectl rbg llm config add-source huggingface --type huggingface --config token=hf_xxx
+   llmctl config add-storage my-pvc --type pvc --config pvcName=model-pvc
+   llmctl config add-source huggingface --type huggingface --config token=hf_xxx
    ```
 
 ## Usage
@@ -25,16 +25,16 @@ The `kubectl rbg llm model` command group manages LLM model assets in configured
 
 ```bash
 # Pull a model with default settings
-kubectl rbg llm model pull Qwen/Qwen3.5-0.8B
+llmctl model pull Qwen/Qwen3.5-0.8B
 
 # Pull a specific revision
-kubectl rbg llm model pull Qwen/Qwen3.5-0.8B --revision v1.0
+llmctl model pull Qwen/Qwen3.5-0.8B --revision v1.0
 
 # Pull using a specific source and storage
-kubectl rbg llm model pull Qwen/Qwen3.5-0.8B --source huggingface --storage model-pvc
+llmctl model pull Qwen/Qwen3.5-0.8B --source huggingface --storage model-pvc
 
 # Pull without waiting for completion
-kubectl rbg llm model pull Qwen/Qwen3.5-0.8B --wait=false
+llmctl model pull Qwen/Qwen3.5-0.8B --wait=false
 ```
 
 By default, the command waits for the pull job to complete and streams logs. Use `--wait=false` to submit the job and return immediately.
@@ -43,10 +43,10 @@ By default, the command waits for the pull job to complete and streams logs. Use
 
 ```bash
 # List models in the default storage
-kubectl rbg llm model list
+llmctl model list
 
 # List models in a specific storage
-kubectl rbg llm model list --storage my-pvc
+llmctl model list --storage my-pvc
 ```
 
 ## Command Flags
@@ -70,13 +70,13 @@ kubectl rbg llm model list --storage my-pvc
 
 ```bash
 # 1. Configure storage and source
-kubectl rbg llm config init
+llmctl config init
 
 # 2. Pull models
-kubectl rbg llm model pull Qwen/Qwen3.5-0.8B
+llmctl model pull Qwen/Qwen3.5-0.8B
 
 # 3. List downloaded models
-kubectl rbg llm model list
+llmctl model list
 
 > MODEL ID                                 REVISION        DOWNLOADED AT
 > ------------------------------------------------------------------------------------------
@@ -85,5 +85,5 @@ kubectl rbg llm model list
 > Qwen/Qwen3.6-35B-A3B                     main            2026-04-21T11:50:53Z
 
 # 4. Deploy a pulled model as an inference service
-kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B
+llmctl svc run my-qwen Qwen/Qwen3.5-0.8B
 ```

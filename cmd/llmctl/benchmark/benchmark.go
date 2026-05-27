@@ -385,7 +385,7 @@ func runBenchmark(ctx context.Context, rbgName string) error {
 	fmt.Printf("Created benchmark Job %s in namespace %s for RBG %s\n", created.Name, ns, rbgName)
 
 	if !benchmarkOpts.wait {
-		fmt.Printf("Benchmark is running asynchronously. Use \"kubectl rbg llm benchmark list %s\" to check status.\n", rbgName)
+		fmt.Printf("Benchmark is running asynchronously. Use \"llmctl benchmark list %s\" to check status.\n", rbgName)
 		return nil
 	}
 

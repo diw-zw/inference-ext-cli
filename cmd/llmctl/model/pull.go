@@ -56,27 +56,27 @@ func newPullCmd(cf *genericclioptions.ConfigFlags) *cobra.Command {
 
 This command creates a Kubernetes Job that downloads the specified model from a source
 (e.g., HuggingFace, ModelScope) to the configured storage (e.g., PVC). The model can
-then be used by inference services created with 'kubectl rbg llm svc run'.
+then be used by inference services created with 'llmctl svc run'.
 
 The command requires:
-  - A configured source (use 'kubectl rbg llm config add-source' to configure)
-  - A configured storage (use 'kubectl rbg llm config add-storage' to configure)
+  - A configured source (use 'llmctl config add-source' to configure)
+  - A configured storage (use 'llmctl config add-storage' to configure)
 
 Examples:
   # Pull a model with default settings
-  kubectl rbg llm model pull Qwen/Qwen3.5-0.8B
+  llmctl model pull Qwen/Qwen3.5-0.8B
 
   # Pull a specific revision of a model
-  kubectl rbg llm model pull Qwen/Qwen3.5-0.8B --revision v1.0
+  llmctl model pull Qwen/Qwen3.5-0.8B --revision v1.0
 
   # Pull using a specific source and storage
-  kubectl rbg llm model pull Qwen/Qwen3.5-0.8B --source huggingface --storage model-pvc
+  llmctl model pull Qwen/Qwen3.5-0.8B --source huggingface --storage model-pvc
 
   # Pull without waiting for completion
-  kubectl rbg llm model pull Qwen/Qwen3.5-0.8B --wait=false
+  llmctl model pull Qwen/Qwen3.5-0.8B --wait=false
 
   # Pull with custom resources (useful for large models that need more memory)
-  kubectl rbg llm model pull Qwen/Qwen3.5-0.8B --memory=16Gi --cpu=4`,
+  llmctl model pull Qwen/Qwen3.5-0.8B --memory=16Gi --cpu=4`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			modelID := args[0]
@@ -92,7 +92,7 @@ Examples:
 				sourceName = source
 			}
 			if sourceName == "" {
-				return fmt.Errorf("no source configured, please run 'kubectl rbg llm config add-source' first")
+				return fmt.Errorf("no source configured, please run 'llmctl config add-source' first")
 			}
 
 			sourceCfg, err := cfg.GetSource(sourceName)
@@ -106,7 +106,7 @@ Examples:
 				storageName = storage
 			}
 			if storageName == "" {
-				return fmt.Errorf("no storage configured, please run 'kubectl rbg llm config add-storage' first")
+				return fmt.Errorf("no storage configured, please run 'llmctl config add-storage' first")
 			}
 
 			storageCfg, err := cfg.GetStorage(storageName)

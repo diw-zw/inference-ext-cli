@@ -66,7 +66,7 @@ func resolveEngine(engineType string, cfg *cliconfig.Config) (*cliconfig.EngineC
 	}
 
 	// 3. Use default (empty config) - plugin will use its built-in defaults
-	fmt.Printf("INFO: Using default configuration for engine '%s'. Run 'kubectl rbg llm config add-engine %s' to customize.\n", engineType, engineType)
+	fmt.Printf("INFO: Using default configuration for engine '%s'. Run 'llmctl config add-engine %s' to customize.\n", engineType, engineType)
 	return &cliconfig.EngineConfig{
 		Type:   engineType,
 		Config: map[string]interface{}{},
@@ -683,35 +683,35 @@ If no model configuration is found, you can still deploy by specifying --engine
 (and optionally --image, --resource, etc.) to provide configuration via flags.
 
 Prerequisites:
-  - The model should be available in storage (use 'kubectl rbg llm model pull' first)
-  - Storage must be configured (use 'kubectl rbg llm config add-storage')
+  - The model should be available in storage (use 'llmctl model pull' first)
+  - Storage must be configured (use 'llmctl config add-storage')
 
 Examples:
   # Quick start with default config
-  kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B
+  llmctl svc run my-qwen Qwen/Qwen3.5-0.8B
 
   # Use a specific mode
-  kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --mode throughput
+  llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --mode throughput
 
   # Override engine
-  kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --mode custom --engine sglang
+  llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --mode custom --engine sglang
 
   # Run with multiple replicas
-  kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --replicas 3
+  llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --replicas 3
 
   # Deploy a custom model without any model config
-  kubectl rbg llm svc run my-model org/new-model --engine vllm --resource nvidia.com/gpu=1
+  llmctl svc run my-model org/new-model --engine vllm --resource nvidia.com/gpu=1
 
   # Dry run to preview the generated configuration
-  kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --dry-run`,
+  llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --dry-run`,
 		Example: `  # Quick start with default config
-  kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B
+  llmctl svc run my-qwen Qwen/Qwen3.5-0.8B
 
   # Use a specific mode
-  kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --mode throughput
+  llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --mode throughput
 
   # Override engine
-  kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --mode custom --engine sglang`,
+  llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --mode custom --engine sglang`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]

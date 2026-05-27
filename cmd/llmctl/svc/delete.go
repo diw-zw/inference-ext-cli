@@ -33,7 +33,7 @@ func newDeleteCmd(cf *genericclioptions.ConfigFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete [name...] [flags]",
 		Short: "Delete LLM inference services",
-		Long: `Delete RoleBasedGroup resources, such as those created by 'kubectl rbg llm svc run'.
+		Long: `Delete RoleBasedGroup resources, such as those created by 'llmctl svc run'.
 
 This command deletes LLM inference services in the selected namespace.
 It deletes services by name, and can delete multiple services in a single invocation.
@@ -42,13 +42,13 @@ Use this command with care and ensure that the specified RoleBasedGroup names co
 to the services you intend to remove
 `,
 		Example: `  # Delete a specific service by name
-  kubectl rbg llm svc delete my-qwen
+  llmctl svc delete my-qwen
 
   # Delete multiple services by name
-  kubectl rbg llm svc delete my-qwen my-llama
+  llmctl svc delete my-qwen my-llama
 
   # Delete a service in a specific namespace
-  kubectl rbg llm svc delete my-qwen -n kubeai
+  llmctl svc delete my-qwen -n kubeai
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {

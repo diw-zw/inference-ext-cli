@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `kubectl rbg llm benchmark` command runs [genai-bench](https://github.com/sgl-project/genai-bench) benchmarks against a RoleBasedGroup deployment in Kubernetes.
+The `llmctl benchmark` command runs [genai-bench](https://github.com/sgl-project/genai-bench) benchmarks against a RoleBasedGroup deployment in Kubernetes.
 
 ## Prerequisites
 
@@ -65,7 +65,7 @@ refer to [kubectl-rbg-llm-generate](kubectl-rbg-llm-generate.md)
 ### Run Benchmark
 
 ```bash
-kubectl rbg llm benchmark run <rbg-name> \
+llmctl benchmark run <rbg-name> \
   --model-tokenizer Qwen/Qwen3-8B \
   --experiment-base-dir pvc://benchmark-output/rbg-benchmark \
   --traffic-scenario "D(100,1000)" \
@@ -75,7 +75,7 @@ kubectl rbg llm benchmark run <rbg-name> \
 By default, the benchmark runs asynchronously and returns immediately. Use `--wait` to synchronously wait for completion and stream logs:
 
 ```bash
-kubectl rbg llm benchmark run <rbg-name> \
+llmctl benchmark run <rbg-name> \
   --model-tokenizer Qwen/Qwen3-8B \
   --experiment-base-dir pvc://benchmark-output/rbg-benchmark \
   --wait
@@ -85,37 +85,37 @@ kubectl rbg llm benchmark run <rbg-name> \
 
 ```bash
 # Show all benchmark jobs for a RBG (sorted by creation time, oldest first)
-kubectl rbg llm benchmark list <rbg-name>
+llmctl benchmark list <rbg-name>
 ```
 
 ### View Benchmark Logs
 
 ```bash
 # Stream logs from a benchmark job (follows in real time by default)
-kubectl rbg llm benchmark logs <rbg-name> --job <job-name>
+llmctl benchmark logs <rbg-name> --job <job-name>
 
 # View logs without following
-kubectl rbg llm benchmark logs <rbg-name> --job <job-name> -f=false
+llmctl benchmark logs <rbg-name> --job <job-name> -f=false
 ```
 
 ### Get Benchmark Config
 
 ```bash
 # Display the benchmark configuration for a specific job
-kubectl rbg llm benchmark get <rbg-name> --job <job-name>
+llmctl benchmark get <rbg-name> --job <job-name>
 ```
 
 ### Delete Benchmark Job
 
 ```bash
 # Delete a specific benchmark job
-kubectl rbg llm benchmark delete <rbg-name> --job <job-name>
+llmctl benchmark delete <rbg-name> --job <job-name>
 ```
 
 ### Browse Results via Web Dashboard
 
 ```bash
-kubectl rbg llm benchmark dashboard \
+llmctl benchmark dashboard \
   --experiment-base-dir pvc://benchmark-output/rbg-benchmark
 ```
 
@@ -215,7 +215,7 @@ spec:
 EOF
 
 # 2. Run benchmark against RBG "qwen3-8b"
-kubectl rbg llm benchmark run qwen3-8b \
+llmctl benchmark run qwen3-8b \
   --model-tokenizer Qwen/Qwen3-8B \
   --experiment-base-dir pvc://benchmark-output/rbg-benchmark \
   --traffic-scenario "D(100,1000)" \
@@ -239,22 +239,22 @@ numConcurrency:
 image: ${image}
 EOF
 
-kubectl rbg llm benchmark run qwen3-8b -f benchmark-config.yaml
+llmctl benchmark run qwen3-8b -f benchmark-config.yaml
 
 # 3. List benchmark jobs
-kubectl rbg llm benchmark list qwen3-8b
+llmctl benchmark list qwen3-8b
 
 # 4. View logs of a benchmark job
-kubectl rbg llm benchmark logs qwen3-8b --job <job-name>
+llmctl benchmark logs qwen3-8b --job <job-name>
 
 # 5. Get benchmark config of a job
-kubectl rbg llm benchmark get qwen3-8b --job <job-name>
+llmctl benchmark get qwen3-8b --job <job-name>
 
 # 6. Delete a benchmark job
-kubectl rbg llm benchmark delete qwen3-8b --job <job-name>
+llmctl benchmark delete qwen3-8b --job <job-name>
 
 # 7. Browse results
-kubectl rbg llm benchmark dashboard \
+llmctl benchmark dashboard \
   --experiment-base-dir pvc://benchmark-output/rbg-benchmark \
   --image ${image}
 ```

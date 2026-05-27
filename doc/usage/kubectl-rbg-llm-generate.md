@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `kubectl-rbg llm generate` command currently integrates with [AI Configurator](https://github.com/ai-dynamo/aiconfigurator) to automatically generate optimized RoleBasedGroup deployment configurations for AI model serving.
+The `llmctl generate` command currently integrates with [AI Configurator](https://github.com/ai-dynamo/aiconfigurator) to automatically generate optimized RoleBasedGroup deployment configurations for AI model serving.
 
 ## Prerequisites
 
@@ -39,7 +39,7 @@ $ sudo mv bin/kubectl-rbg /usr/local/bin/
 #### Option 1: Using TTFT and TPOT
 
 ```bash
-kubectl rbg llm generate \
+llmctl generate \
   --configurator-tool aiconfigurator \
   --model Qwen/Qwen3.5-9B \
   --system h200_sxm \
@@ -55,7 +55,7 @@ kubectl rbg llm generate \
 #### Option 2: Using Request Latency
 
 ```bash
-kubectl rbg llm generate \
+llmctl generate \
   --configurator-tool aiconfigurator \
   --model Qwen/Qwen3.5-9B \
   --system h200_sxm \

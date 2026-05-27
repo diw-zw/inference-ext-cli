@@ -56,16 +56,16 @@ OSS configuration fields:
 
 Examples:
   # Add a PVC storage with command-line flags
-  kubectl rbg llm config add-storage my-pvc --type pvc --config pvcName=model-pvc
+  llmctl config add-storage my-pvc --type pvc --config pvcName=model-pvc
 
   # Add an OSS storage with command-line flags
-  kubectl rbg llm config add-storage my-oss --type oss --config url=oss-cn-hangzhou.aliyuncs.com --config bucket=my-bucket --config akId=MY_ACCESS_KEY_ID --config akSecret=MY_ACCESS_KEY_SECRET
+  llmctl config add-storage my-oss --type oss --config url=oss-cn-hangzhou.aliyuncs.com --config bucket=my-bucket --config akId=MY_ACCESS_KEY_ID --config akSecret=MY_ACCESS_KEY_SECRET
 
   # Add storage interactively
-  kubectl rbg llm config add-storage my-pvc -i`,
+  llmctl config add-storage my-pvc -i`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'add-storage' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config add-storage NAME [-i]\n\nSee 'kubectl rbg llm config add-storage -h' for examples")
+				return fmt.Errorf("'add-storage' requires exactly 1 argument\n\nUsage:\n  llmctl config add-storage NAME [-i]\n\nSee 'llmctl config add-storage -h' for examples")
 			}
 			return nil
 		},
@@ -149,10 +149,10 @@ With NAME: displays the detailed configuration for the named storage.
 
 Examples:
   # List all storages
-  kubectl rbg llm config get-storages
+  llmctl config get-storages
 
   # Show details of a specific storage
-  kubectl rbg llm config get-storages my-pvc`,
+  llmctl config get-storages my-pvc`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load()
@@ -205,10 +205,10 @@ func newUseStorageCmd() *cobra.Command {
 The active storage is used by default when deploying models.
 
 Example:
-  kubectl rbg llm config use-storage my-pvc`,
+  llmctl config use-storage my-pvc`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'use-storage' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config use-storage NAME\n\nSee 'kubectl rbg llm config use-storage -h' for examples")
+				return fmt.Errorf("'use-storage' requires exactly 1 argument\n\nUsage:\n  llmctl config use-storage NAME\n\nSee 'llmctl config use-storage -h' for examples")
 			}
 			return nil
 		},
@@ -244,10 +244,10 @@ func newSetStorageCmd() *cobra.Command {
 Modify the configuration parameters of a previously added storage.
 
 Example:
-  kubectl rbg llm config set-storage my-pvc --config pvcName=new-model-pvc`,
+  llmctl config set-storage my-pvc --config pvcName=new-model-pvc`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'set-storage' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config set-storage NAME [--config key=value]\n\nSee 'kubectl rbg llm config set-storage -h' for examples")
+				return fmt.Errorf("'set-storage' requires exactly 1 argument\n\nUsage:\n  llmctl config set-storage NAME [--config key=value]\n\nSee 'llmctl config set-storage -h' for examples")
 			}
 			return nil
 		},
@@ -291,10 +291,10 @@ func newDeleteStorageCmd() *cobra.Command {
 Note: Cannot delete the currently active storage. Switch to another storage first.
 
 Example:
-  kubectl rbg llm config delete-storage my-pvc`,
+  llmctl config delete-storage my-pvc`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'delete-storage' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config delete-storage NAME\n\nSee 'kubectl rbg llm config delete-storage -h' for examples")
+				return fmt.Errorf("'delete-storage' requires exactly 1 argument\n\nUsage:\n  llmctl config delete-storage NAME\n\nSee 'llmctl config delete-storage -h' for examples")
 			}
 			return nil
 		},

@@ -51,7 +51,7 @@ deployment configurations for AI model serving. It supports both Prefill-Decode
 disaggregated mode and aggregated mode deployments.
 
 Example:
-  kubectl-rbg llm generate --configurator-tool aiconfigurator --model Qwen/Qwen3.5-9B --system h200_sxm --total-gpus 8 \
+  llmctl generate --configurator-tool aiconfigurator --model Qwen/Qwen3.5-9B --system h200_sxm --total-gpus 8 \
     --backend sglang --isl 4000 --osl 1000 --ttft 1000 --tpot 10 --save-dir /tmp/rbg-llm-generate-output
 
 This will:

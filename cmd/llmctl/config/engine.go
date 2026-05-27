@@ -42,10 +42,10 @@ Currently supported engine types:
   - vllm: vLLM inference engine
 
 Example:
-  kubectl rbg llm config set-engine sglang --config defaultPort=8000`,
+  llmctl config set-engine sglang --config defaultPort=8000`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'set-engine' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config set-engine ENGINE_TYPE [--config key=value]\n\nSee 'kubectl rbg llm config set-engine -h' for examples")
+				return fmt.Errorf("'set-engine' requires exactly 1 argument\n\nUsage:\n  llmctl config set-engine ENGINE_TYPE [--config key=value]\n\nSee 'llmctl config set-engine -h' for examples")
 			}
 			return nil
 		},
@@ -98,10 +98,10 @@ If the engine has no custom configuration, it indicates that defaults are being 
 
 Examples:
   # List all customized engines
-  kubectl rbg llm config get-engines
+  llmctl config get-engines
 
   # Show details of a specific engine
-  kubectl rbg llm config get-engines sglang`,
+  llmctl config get-engines sglang`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load()
@@ -122,7 +122,7 @@ Examples:
 					printConfigItems(e.Config, engineplugin.GetFields(engineType))
 				} else {
 					fmt.Println("  Configuration: (using defaults)")
-					fmt.Println("  No custom configuration found. Run 'kubectl rbg llm config set-engine' to customize.")
+					fmt.Println("  No custom configuration found. Run 'llmctl config set-engine' to customize.")
 				}
 				return nil
 			}
@@ -149,10 +149,10 @@ func newResetEngineCmd() *cobra.Command {
 		Long: `Remove custom configuration for an engine, reverting to default settings.
 
 Example:
-  kubectl rbg llm config reset-engine sglang`,
+  llmctl config reset-engine sglang`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'reset-engine' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config reset-engine ENGINE_TYPE\n\nSee 'kubectl rbg llm config reset-engine -h' for examples")
+				return fmt.Errorf("'reset-engine' requires exactly 1 argument\n\nUsage:\n  llmctl config reset-engine ENGINE_TYPE\n\nSee 'llmctl config reset-engine -h' for examples")
 			}
 			return nil
 		},

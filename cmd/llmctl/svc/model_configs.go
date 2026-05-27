@@ -35,16 +35,16 @@ func newModelConfigsCmd() *cobra.Command {
 		Long: `List built-in and user-defined model configurations with their available run modes.
 
 Use this to discover which model IDs and modes are supported before running
-'kubectl rbg llm svc run'.
+'llmctl svc run'.
 
 Use -o wide to show additional columns (source, engine).
 
 Examples:
   # List all available model configurations
-  kubectl rbg llm svc model-configs
+  llmctl svc model-configs
 
   # Show full details
-  kubectl rbg llm svc model-configs -o wide
+  llmctl svc model-configs -o wide
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if output != "" && output != "wide" {

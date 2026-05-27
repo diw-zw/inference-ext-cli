@@ -13,7 +13,7 @@ This CLI tool provides a comprehensive set of commands for deploying, managing, 
 First, set up your configuration:
 
 ```bash
-kubectl rbg llm config init
+llmctl config init
 ```
 
 This will guide you through configuring:
@@ -25,7 +25,7 @@ This will guide you through configuring:
 Download a model to storage:
 
 ```bash
-kubectl rbg llm model pull Qwen/Qwen3.5-0.8B
+llmctl model pull Qwen/Qwen3.5-0.8B
 ```
 
 ### 3. Run an LLM Service
@@ -34,10 +34,10 @@ Deploy a model to your Kubernetes cluster:
 
 ```bash
 # Deploy a model with a pre-built model config
-kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B
+llmctl svc run my-qwen Qwen/Qwen3.5-0.8B
 
 # Or deploy a custom model without a pre-built model config
-kubectl rbg llm svc run my-model org/new-model --engine vllm --resource nvidia.com/gpu=1
+llmctl svc run my-model org/new-model --engine vllm --resource nvidia.com/gpu=1
 ```
 
 ### 4. Chat with the Model
@@ -46,10 +46,10 @@ Once the service is running, you can chat with it:
 
 ```bash
 # Interactive mode
-kubectl rbg llm svc chat my-qwen -i
+llmctl svc chat my-qwen -i
 
 # Or send a single prompt
-kubectl rbg llm svc chat my-qwen --prompt "Hello, how are you?"
+llmctl svc chat my-qwen --prompt "Hello, how are you?"
 ```
 
 ### 5. Generate Optimized Configurations
@@ -57,7 +57,7 @@ kubectl rbg llm svc chat my-qwen --prompt "Hello, how are you?"
 For production deployments, use the AI Configurator to generate optimized configurations:
 
 ```bash
-kubectl rbg llm generate --model Qwen/Qwen3.5-9B --system h200_sxm --total-gpus 8 \
+llmctl generate --model Qwen/Qwen3.5-9B --system h200_sxm --total-gpus 8 \
   --isl 4000 --osl 1000 --ttft 1000 --tpot 10
 ```
 
@@ -74,7 +74,7 @@ kubectl apply -f /tmp/rbg-llm-generate-output/qwen3-5-9b-sglang-disagg.yaml
 Run an LLM inference service on Kubernetes.
 
 ```bash
-kubectl rbg llm svc run NAME MODEL_ID [flags]
+llmctl svc run NAME MODEL_ID [flags]
 ```
 
 **Arguments:**
@@ -111,50 +111,50 @@ kubectl rbg llm svc run NAME MODEL_ID [flags]
 
 ```bash
 # Run a model with default settings
-kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B
+llmctl svc run my-qwen Qwen/Qwen3.5-0.8B
 
 # Use a specific mode
-kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --mode throughput
+llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --mode throughput
 
 # Override engine
-kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --mode custom --engine sglang
+llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --mode custom --engine sglang
 
 # Use a custom image (e.g., mirror registry)
-kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --image registry.cn-hangzhou.aliyuncs.com/my/vllm:latest
+llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --image registry.cn-hangzhou.aliyuncs.com/my/vllm:latest
 
 # Run with multiple replicas
-kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --replicas 3
+llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --replicas 3
 
 # Deploy a custom model without a pre-built model config
-kubectl rbg llm svc run my-model org/new-model --engine vllm --resource nvidia.com/gpu=1
+llmctl svc run my-model org/new-model --engine vllm --resource nvidia.com/gpu=1
 
 # Deploy with custom resources, distributed size, and shared memory
-kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --resource nvidia.com/gpu=2 --resource memory=16Gi --distributed-size 4 --shm-size 16Gi
+llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --resource nvidia.com/gpu=2 --resource memory=16Gi --distributed-size 4 --shm-size 16Gi
 
 # Dry run to preview the generated configuration
-kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --dry-run
+llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --dry-run
 
 # Pass additional environment variables
-kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --env CUDA_VISIBLE_DEVICES=0,1 --env LOG_LEVEL=debug
+llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --env CUDA_VISIBLE_DEVICES=0,1 --env LOG_LEVEL=debug
 
 # Pass additional engine arguments
-kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --arg --max-model-len=4096 --arg --dtype=half
+llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --arg --max-model-len=4096 --arg --dtype=half
 
 # Specify a custom model path (when models are placed manually in storage)
-kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --model-path /models/my-custom-model
+llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --model-path /models/my-custom-model
 
 # Skip API readiness test
-kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --test-api=false
+llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --test-api=false
 ```
 
 ### llm svc model-configs
 
 List available model configurations (built-in and user-defined).
 
-This command helps you discover which models and run modes are available before deploying with `kubectl rbg llm svc run`. Each model config includes the model ID, supported modes, inference engine, and resource requirements.
+This command helps you discover which models and run modes are available before deploying with `llmctl svc run`. Each model config includes the model ID, supported modes, inference engine, and resource requirements.
 
 ```bash
-kubectl rbg llm svc model-configs [flags]
+llmctl svc model-configs [flags]
 ```
 
 **Flags:**
@@ -167,10 +167,10 @@ kubectl rbg llm svc model-configs [flags]
 
 ```bash
 # List all available model configurations
-kubectl rbg llm svc model-configs
+llmctl svc model-configs
 
 # Show full details with engine and source
-kubectl rbg llm svc model-configs -o wide
+llmctl svc model-configs -o wide
 ```
 
 ### llm svc list
@@ -178,7 +178,7 @@ kubectl rbg llm svc model-configs -o wide
 List all running LLM inference services.
 
 ```bash
-kubectl rbg llm svc list [flags]
+llmctl svc list [flags]
 ```
 
 **Flags:**
@@ -191,10 +191,10 @@ kubectl rbg llm svc list [flags]
 
 ```bash
 # List services in current namespace
-kubectl rbg llm svc list
+llmctl svc list
 
 # List services in all namespaces
-kubectl rbg llm svc list -A
+llmctl svc list -A
 ```
 
 ### llm svc delete
@@ -202,13 +202,13 @@ kubectl rbg llm svc list -A
 Delete an LLM inference service.
 
 ```bash
-kubectl rbg llm svc delete NAME... [flags]
+llmctl svc delete NAME... [flags]
 ```
 
 **Example:**
 
 ```bash
-kubectl rbg llm svc delete my-qwen
+llmctl svc delete my-qwen
 ```
 
 ### llm model list
@@ -216,7 +216,7 @@ kubectl rbg llm svc delete my-qwen
 List downloaded models in storage.
 
 ```bash
-kubectl rbg llm model list [flags]
+llmctl model list [flags]
 ```
 
 **Flags:**
@@ -229,10 +229,10 @@ kubectl rbg llm model list [flags]
 
 ```bash
 # List models in the default storage
-kubectl rbg llm model list
+llmctl model list
 
 # List models in a specific storage
-kubectl rbg llm model list --storage my-pvc
+llmctl model list --storage my-pvc
 ```
 
 ### llm model pull
@@ -240,7 +240,7 @@ kubectl rbg llm model list --storage my-pvc
 Pull a model from the configured source to storage.
 
 ```bash
-kubectl rbg llm model pull MODEL_ID [flags]
+llmctl model pull MODEL_ID [flags]
 ```
 
 **Flags:**
@@ -256,13 +256,13 @@ kubectl rbg llm model pull MODEL_ID [flags]
 
 ```bash
 # Pull a model with default settings
-kubectl rbg llm model pull Qwen/Qwen2.5-7B
+llmctl model pull Qwen/Qwen2.5-7B
 
 # Pull a specific revision
-kubectl rbg llm model pull Qwen/Qwen2.5-7B --revision v1.0
+llmctl model pull Qwen/Qwen2.5-7B --revision v1.0
 
 # Pull without waiting for completion
-kubectl rbg llm model pull Qwen/Qwen2.5-7B --wait=false
+llmctl model pull Qwen/Qwen2.5-7B --wait=false
 ```
 
 ### llm svc chat
@@ -270,7 +270,7 @@ kubectl rbg llm model pull Qwen/Qwen2.5-7B --wait=false
 Chat with a running LLM inference service.
 
 ```bash
-kubectl rbg llm svc chat NAME [flags]
+llmctl svc chat NAME [flags]
 ```
 
 **Flags:**
@@ -289,13 +289,13 @@ kubectl rbg llm svc chat NAME [flags]
 
 ```bash
 # Interactive chat session
-kubectl rbg llm svc chat my-qwen -i
+llmctl svc chat my-qwen -i
 
 # Single prompt (non-interactive)
-kubectl rbg llm svc chat my-qwen --prompt "What is the capital of France?"
+llmctl svc chat my-qwen --prompt "What is the capital of France?"
 
 # With system prompt (interactive)
-kubectl rbg llm svc chat my-qwen -i --system "You are a helpful assistant."
+llmctl svc chat my-qwen -i --system "You are a helpful assistant."
 ```
 
 ### llm generate
@@ -303,7 +303,7 @@ kubectl rbg llm svc chat my-qwen -i --system "You are a helpful assistant."
 Generate optimized RBG deployment configurations using AI Configurator.
 
 ```bash
-kubectl rbg llm generate [flags]
+llmctl generate [flags]
 ```
 
 **Required Flags:**
@@ -335,11 +335,11 @@ kubectl rbg llm generate [flags]
 
 ```bash
 # Generate configuration with TTFT and TPOT targets
-kubectl rbg llm generate --model Qwen/Qwen3.5-9B --system h200_sxm --total-gpus 8 \
+llmctl generate --model Qwen/Qwen3.5-9B --system h200_sxm --total-gpus 8 \
   --isl 4000 --osl 1000 --ttft 1000 --tpot 10
 
 # Generate with request latency target
-kubectl rbg llm generate --model meta-llama/Llama-3-70B --system h100_sxm --total-gpus 16 \
+llmctl generate --model meta-llama/Llama-3-70B --system h100_sxm --total-gpus 16 \
   --isl 8192 --osl 2048 --request-latency 5000
 ```
 
@@ -348,7 +348,7 @@ kubectl rbg llm generate --model meta-llama/Llama-3-70B --system h100_sxm --tota
 Run benchmarks against LLM inference services.
 
 ```bash
-kubectl rbg llm benchmark [command] [flags]
+llmctl benchmark [command] [flags]
 ```
 
 #### benchmark run
@@ -356,7 +356,7 @@ kubectl rbg llm benchmark [command] [flags]
 Run a benchmark test.
 
 ```bash
-kubectl rbg llm benchmark run RBG_NAME [flags]
+llmctl benchmark run RBG_NAME [flags]
 ```
 
 **Arguments:**
@@ -395,12 +395,12 @@ kubectl rbg llm benchmark run RBG_NAME [flags]
 
 ```bash
 # Run benchmark with required flags
-kubectl rbg llm benchmark run my-qwen \
+llmctl benchmark run my-qwen \
   --model-tokenizer Qwen/Qwen3-8B \
   --experiment-base-dir pvc://my-pvc/results
 
 # Run with custom traffic scenarios and concurrency levels
-kubectl rbg llm benchmark run my-qwen \
+llmctl benchmark run my-qwen \
   --model-tokenizer Qwen/Qwen3-8B \
   --experiment-base-dir pvc://my-pvc/results \
   --traffic-scenario "D(100,1000)" \
@@ -408,10 +408,10 @@ kubectl rbg llm benchmark run my-qwen \
   --num-concurrency 1,2,4,8
 
 # Run with config file
-kubectl rbg llm benchmark run my-qwen --config benchmark-config.yaml
+llmctl benchmark run my-qwen --config benchmark-config.yaml
 
 # Run and wait for completion
-kubectl rbg llm benchmark run my-qwen \
+llmctl benchmark run my-qwen \
   --model-tokenizer Qwen/Qwen3-8B \
   --experiment-base-dir pvc://my-pvc/results \
   --wait
@@ -422,7 +422,7 @@ kubectl rbg llm benchmark run my-qwen \
 Get benchmark configuration for a benchmark job.
 
 ```bash
-kubectl rbg llm benchmark get RBG_NAME --job JOB_NAME [flags]
+llmctl benchmark get RBG_NAME --job JOB_NAME [flags]
 ```
 
 **Flags:**
@@ -436,7 +436,7 @@ kubectl rbg llm benchmark get RBG_NAME --job JOB_NAME [flags]
 List benchmark jobs for a RoleBasedGroup.
 
 ```bash
-kubectl rbg llm benchmark list RBG_NAME
+llmctl benchmark list RBG_NAME
 ```
 
 #### benchmark delete
@@ -444,7 +444,7 @@ kubectl rbg llm benchmark list RBG_NAME
 Delete a benchmark job.
 
 ```bash
-kubectl rbg llm benchmark delete RBG_NAME --job JOB_NAME [flags]
+llmctl benchmark delete RBG_NAME --job JOB_NAME [flags]
 ```
 
 **Flags:**
@@ -458,7 +458,7 @@ kubectl rbg llm benchmark delete RBG_NAME --job JOB_NAME [flags]
 View benchmark job logs.
 
 ```bash
-kubectl rbg llm benchmark logs RBG_NAME [flags]
+llmctl benchmark logs RBG_NAME [flags]
 ```
 
 **Flags:**
@@ -473,7 +473,7 @@ kubectl rbg llm benchmark logs RBG_NAME [flags]
 Start a web dashboard to browse benchmark results.
 
 ```bash
-kubectl rbg llm benchmark dashboard [flags]
+llmctl benchmark dashboard [flags]
 ```
 
 **Required Flags:**
@@ -499,7 +499,7 @@ Manage LLM configuration including storage, sources, and engines.
 Initialize LLM configuration interactively.
 
 ```bash
-kubectl rbg llm config init
+llmctl config init
 ```
 
 This command guides you through setting up storage and source configurations.
@@ -509,7 +509,7 @@ This command guides you through setting up storage and source configurations.
 View current configuration.
 
 ```bash
-kubectl rbg llm config view
+llmctl config view
 ```
 
 #### Storage Management
@@ -519,7 +519,7 @@ kubectl rbg llm config view
 Add a storage configuration.
 
 ```bash
-kubectl rbg llm config add-storage NAME [flags]
+llmctl config add-storage NAME [flags]
 ```
 
 **Flags:**
@@ -534,14 +534,14 @@ kubectl rbg llm config add-storage NAME [flags]
 
 ```bash
 # Add PVC storage
-kubectl rbg llm config add-storage my-pvc --type pvc --config pvcName=model-pvc
+llmctl config add-storage my-pvc --type pvc --config pvcName=model-pvc
 
 # Add OSS storage
-kubectl rbg llm config add-storage my-oss --type oss \
+llmctl config add-storage my-oss --type oss \
   --config url=oss-cn-hangzhou.aliyuncs.com --config bucket=my-bucket
 
 # Interactive mode
-kubectl rbg llm config add-storage my-pvc -i
+llmctl config add-storage my-pvc -i
 ```
 
 ##### config get-storages
@@ -550,10 +550,10 @@ List all storage configurations or show details of one.
 
 ```bash
 # List all storage configurations
-kubectl rbg llm config get-storages
+llmctl config get-storages
 
 # Show details of a specific storage
-kubectl rbg llm config get-storages my-pvc
+llmctl config get-storages my-pvc
 ```
 
 ##### config use-storage
@@ -561,7 +561,7 @@ kubectl rbg llm config get-storages my-pvc
 Set the current active storage.
 
 ```bash
-kubectl rbg llm config use-storage NAME
+llmctl config use-storage NAME
 ```
 
 ##### config set-storage
@@ -569,7 +569,7 @@ kubectl rbg llm config use-storage NAME
 Update a storage configuration.
 
 ```bash
-kubectl rbg llm config set-storage NAME --config key=value
+llmctl config set-storage NAME --config key=value
 ```
 
 ##### config delete-storage
@@ -577,7 +577,7 @@ kubectl rbg llm config set-storage NAME --config key=value
 Delete a storage configuration.
 
 ```bash
-kubectl rbg llm config delete-storage NAME
+llmctl config delete-storage NAME
 ```
 
 #### Source Management
@@ -587,7 +587,7 @@ kubectl rbg llm config delete-storage NAME
 Add a model source configuration.
 
 ```bash
-kubectl rbg llm config add-source NAME [flags]
+llmctl config add-source NAME [flags]
 ```
 
 **Flags:**
@@ -602,10 +602,10 @@ kubectl rbg llm config add-source NAME [flags]
 
 ```bash
 # Add HuggingFace source
-kubectl rbg llm config add-source huggingface --type huggingface --config token=hf_xxx
+llmctl config add-source huggingface --type huggingface --config token=hf_xxx
 
 # Interactive mode
-kubectl rbg llm config add-source huggingface -i
+llmctl config add-source huggingface -i
 ```
 
 ##### config get-sources
@@ -614,10 +614,10 @@ List all source configurations or show details of one.
 
 ```bash
 # List all source configurations
-kubectl rbg llm config get-sources
+llmctl config get-sources
 
 # Show details of a specific source
-kubectl rbg llm config get-sources huggingface
+llmctl config get-sources huggingface
 ```
 
 ##### config use-source
@@ -625,7 +625,7 @@ kubectl rbg llm config get-sources huggingface
 Set the current active source.
 
 ```bash
-kubectl rbg llm config use-source NAME
+llmctl config use-source NAME
 ```
 
 ##### config set-source
@@ -633,7 +633,7 @@ kubectl rbg llm config use-source NAME
 Update a source configuration.
 
 ```bash
-kubectl rbg llm config set-source NAME --config key=value
+llmctl config set-source NAME --config key=value
 ```
 
 ##### config delete-source
@@ -641,7 +641,7 @@ kubectl rbg llm config set-source NAME --config key=value
 Delete a source configuration.
 
 ```bash
-kubectl rbg llm config delete-source NAME
+llmctl config delete-source NAME
 ```
 
 #### Engine Management
@@ -652,10 +652,10 @@ List customized engine configurations or show details of one.
 
 ```bash
 # List all customized engines
-kubectl rbg llm config get-engines
+llmctl config get-engines
 
 # Show details of a specific engine
-kubectl rbg llm config get-engines sglang
+llmctl config get-engines sglang
 ```
 
 ##### config set-engine
@@ -663,7 +663,7 @@ kubectl rbg llm config get-engines sglang
 Customize engine configuration (optional).
 
 ```bash
-kubectl rbg llm config set-engine ENGINE_TYPE --config key=value
+llmctl config set-engine ENGINE_TYPE --config key=value
 ```
 
 Supported engines: `sglang`, `vllm`
@@ -671,7 +671,7 @@ Supported engines: `sglang`, `vllm`
 **Example:**
 
 ```bash
-kubectl rbg llm config set-engine sglang --config defaultPort=8000
+llmctl config set-engine sglang --config defaultPort=8000
 ```
 
 ##### config reset-engine
@@ -679,7 +679,7 @@ kubectl rbg llm config set-engine sglang --config defaultPort=8000
 Remove custom engine configuration, reverting to defaults.
 
 ```bash
-kubectl rbg llm config reset-engine ENGINE_TYPE
+llmctl config reset-engine ENGINE_TYPE
 ```
 
 ## Configuration File
@@ -716,46 +716,46 @@ sources:
 
 ```bash
 # 1. Initialize configuration
-kubectl rbg llm config init
+llmctl config init
 
 # 2. Verify configuration
-kubectl rbg llm config view
+llmctl config view
 
 # 3. Pull a model
-kubectl rbg llm model pull Qwen/Qwen2.5-7B
+llmctl model pull Qwen/Qwen2.5-7B
 
 # 4. Run the model
-kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B --replicas 2
+llmctl svc run my-qwen Qwen/Qwen3.5-0.8B --replicas 2
 
 # 5. Check service status
-kubectl rbg llm svc list
+llmctl svc list
 
 # 6. Chat with the model
-kubectl rbg llm svc chat my-qwen --prompt "Explain Kubernetes in simple terms"
+llmctl svc chat my-qwen --prompt "Explain Kubernetes in simple terms"
 
 # 7. Run benchmarks
-kubectl rbg llm benchmark run my-qwen \
+llmctl benchmark run my-qwen \
   --model-tokenizer Qwen/Qwen3-8B \
   --experiment-base-dir pvc://my-pvc/results \
   --wait
 
 # 8. Clean up
-kubectl rbg llm svc delete my-qwen
+llmctl svc delete my-qwen
 ```
 
 ### Multi-Model Deployment Example
 
 ```bash
 # Deploy multiple models with different configurations
-kubectl rbg llm svc run qwen-small Qwen/Qwen3.5-0.8B --replicas 1
-kubectl rbg llm svc run qwen-large Qwen/Qwen3-32B --mode throughput --replicas 2
-kubectl rbg llm svc run llama-model meta-llama/Llama-3-8B --engine sglang
+llmctl svc run qwen-small Qwen/Qwen3.5-0.8B --replicas 1
+llmctl svc run qwen-large Qwen/Qwen3-32B --mode throughput --replicas 2
+llmctl svc run llama-model meta-llama/Llama-3-8B --engine sglang
 
 # Deploy a custom model with no pre-built model config
-kubectl rbg llm svc run my-custom org/my-model --engine vllm --resource nvidia.com/gpu=4 --shm-size 32Gi
+llmctl svc run my-custom org/my-model --engine vllm --resource nvidia.com/gpu=4 --shm-size 32Gi
 
 # List all services
-kubectl rbg llm svc list
+llmctl svc list
 ```
 
 ## Troubleshooting
@@ -765,7 +765,7 @@ kubectl rbg llm svc list
 If you encounter port-forward timeout errors, increase the timeout:
 
 ```bash
-kubectl rbg llm svc chat my-model --port-forward-timeout 60s
+llmctl svc chat my-model --port-forward-timeout 60s
 ```
 
 ### Model not found
@@ -773,7 +773,7 @@ kubectl rbg llm svc chat my-model --port-forward-timeout 60s
 Ensure the model is pulled to storage:
 
 ```bash
-kubectl rbg llm model pull MODEL_ID
+llmctl model pull MODEL_ID
 ```
 
 ### GPU allocation issues

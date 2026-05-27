@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `kubectl rbg llm config` command group manages the CLI configuration for LLM deployments, including storage backends, model download sources, and inference engine settings.
+The `llmctl config` command group manages the CLI configuration for LLM deployments, including storage backends, model download sources, and inference engine settings.
 
 Configuration is stored locally at `~/.rbg/config`.
 
@@ -13,13 +13,13 @@ Configuration is stored locally at `~/.rbg/config`.
 The interactive wizard guides you through setting up storage and source in one step:
 
 ```bash
-kubectl rbg llm config init
+llmctl config init
 ```
 
 ### View Configuration
 
 ```bash
-kubectl rbg llm config view
+llmctl config view
 ```
 
 Sensitive fields (e.g. API tokens, AccessKey secrets) are masked in the output.
@@ -39,7 +39,7 @@ Storage defines where models are stored and accessed by inference engines.
 | `pvcName` | Yes | Name of the pre-existing PersistentVolumeClaim |
 
 ```bash
-kubectl rbg llm config add-storage my-pvc --type pvc --config pvcName=model-pvc
+llmctl config add-storage my-pvc --type pvc --config pvcName=model-pvc
 ```
 
 #### OSS (Alibaba Cloud Object Storage Service)
@@ -53,7 +53,7 @@ kubectl rbg llm config add-storage my-pvc --type pvc --config pvcName=model-pvc
 | `akSecret` | Yes | Alibaba Cloud AccessKey Secret |
 
 ```bash
-kubectl rbg llm config add-storage my-oss --type oss \
+llmctl config add-storage my-oss --type oss \
   --config url=oss-cn-hangzhou.aliyuncs.com \
   --config bucket=my-bucket \
   --config akId=MY_ACCESS_KEY_ID \
@@ -66,25 +66,25 @@ The credentials are stored as a Kubernetes Secret; only the secret reference is 
 
 ```bash
 # Add a storage configuration
-kubectl rbg llm config add-storage NAME --type TYPE --config key=value
+llmctl config add-storage NAME --type TYPE --config key=value
 
 # Add interactively
-kubectl rbg llm config add-storage NAME -i
+llmctl config add-storage NAME -i
 
 # List all storage configurations
-kubectl rbg llm config get-storages
+llmctl config get-storages
 
 # Show details of a specific storage
-kubectl rbg llm config get-storages my-pvc
+llmctl config get-storages my-pvc
 
 # Set the active storage
-kubectl rbg llm config use-storage NAME
+llmctl config use-storage NAME
 
 # Update a storage configuration
-kubectl rbg llm config set-storage NAME --config key=value
+llmctl config set-storage NAME --config key=value
 
 # Delete a storage configuration
-kubectl rbg llm config delete-storage NAME
+llmctl config delete-storage NAME
 ```
 
 > Note: Cannot delete the currently active storage. Switch to another storage first.
@@ -106,7 +106,7 @@ Sources define where models are downloaded from.
 | `mirror` | No | Mirror URL (e.g. `https://hf-mirror.com`) |
 
 ```bash
-kubectl rbg llm config add-source hf --type huggingface --config token=hf_xxx
+llmctl config add-source hf --type huggingface --config token=hf_xxx
 ```
 
 #### ModelScope
@@ -117,32 +117,32 @@ kubectl rbg llm config add-source hf --type huggingface --config token=hf_xxx
 | `tokenSecret` | No | Kubernetes Secret name containing `MODELSCOPE_TOKEN` (takes precedence over `token`) |
 
 ```bash
-kubectl rbg llm config add-source ms --type modelscope --config token=xxx
+llmctl config add-source ms --type modelscope --config token=xxx
 ```
 
 ### Source Subcommands
 
 ```bash
 # Add a source configuration
-kubectl rbg llm config add-source NAME --type TYPE --config key=value
+llmctl config add-source NAME --type TYPE --config key=value
 
 # Add interactively
-kubectl rbg llm config add-source NAME -i
+llmctl config add-source NAME -i
 
 # List all source configurations
-kubectl rbg llm config get-sources
+llmctl config get-sources
 
 # Show details of a specific source
-kubectl rbg llm config get-sources huggingface
+llmctl config get-sources huggingface
 
 # Set the active source
-kubectl rbg llm config use-source NAME
+llmctl config use-source NAME
 
 # Update a source configuration
-kubectl rbg llm config set-source NAME --config key=value
+llmctl config set-source NAME --config key=value
 
 # Delete a source configuration
-kubectl rbg llm config delete-source NAME
+llmctl config delete-source NAME
 ```
 
 > Note: Cannot delete the currently active source. Switch to another source first.
@@ -173,16 +173,16 @@ Engine configuration is optional — engines work with sensible defaults. Use th
 
 ```bash
 # Customize engine configuration
-kubectl rbg llm config set-engine ENGINE_TYPE --config key=value
+llmctl config set-engine ENGINE_TYPE --config key=value
 
 # List customized engine configurations
-kubectl rbg llm config get-engines
+llmctl config get-engines
 
 # Show details of a specific engine
-kubectl rbg llm config get-engines sglang
+llmctl config get-engines sglang
 
 # Remove custom configuration, revert to defaults
-kubectl rbg llm config reset-engine ENGINE_TYPE
+llmctl config reset-engine ENGINE_TYPE
 ```
 
 ---
@@ -219,14 +219,14 @@ kubectl rbg llm config reset-engine ENGINE_TYPE
 
 ```bash
 # 1. Initialize configuration interactively
-kubectl rbg llm config init
+llmctl config init
 
 # 2. Or set up manually
-kubectl rbg llm config add-storage my-pvc --type pvc --config pvcName=model-pvc
-kubectl rbg llm config add-source hf --type huggingface --config token=hf_xxx
+llmctl config add-storage my-pvc --type pvc --config pvcName=model-pvc
+llmctl config add-source hf --type huggingface --config token=hf_xxx
 
 # 3. View current configuration
-kubectl rbg llm config view
+llmctl config view
 > Current Configuration:
 > 
 > Storage: oss-name (active)
@@ -242,19 +242,19 @@ kubectl rbg llm config view
 >   Type: huggingface
 
 # 4. Switch active storage/source
-kubectl rbg llm config use-storage my-pvc
-kubectl rbg llm config use-source hf
+llmctl config use-storage my-pvc
+llmctl config use-source hf
 
 # 5. Customize engine (optional)
-kubectl rbg llm config set-engine vllm --config image=my-registry/vllm:custom
+llmctl config set-engine vllm --config image=my-registry/vllm:custom
 
 # 6. List all configurations
-kubectl rbg llm config get-storages
+llmctl config get-storages
 > NAME       TYPE  CURRENT
 > oss-pvc    pvc   
 > oss-name   oss   *
 
-kubectl rbg llm config get-storages oss-name
+llmctl config get-storages oss-name
 > Storage: oss-name (active)
 >   Type: oss
 >   Config:
@@ -264,19 +264,19 @@ kubectl rbg llm config get-storages oss-name
 >     subpath: /test-cli/
 >     url: oss-cn-hongkong-internal.aliyuncs.com
 
-kubectl rbg llm config get-sources
+llmctl config get-sources
 > NAME         TYPE         CURRENT
 > huggingface  huggingface  *
 
-kubectl rbg llm config get-sources huggingface
+llmctl config get-sources huggingface
 > Source: huggingface (active)
 >   Type: huggingface
 
 # 7. Update a configuration
-kubectl rbg llm config set-storage my-pvc --config pvcName=new-model-pvc
+llmctl config set-storage my-pvc --config pvcName=new-model-pvc
 
 # 8. Clean up
-kubectl rbg llm config reset-engine vllm
-kubectl rbg llm config delete-source hf
-kubectl rbg llm config delete-storage my-pvc
+llmctl config reset-engine vllm
+llmctl config delete-source hf
+llmctl config delete-storage my-pvc
 ```

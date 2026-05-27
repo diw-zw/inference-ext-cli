@@ -78,7 +78,7 @@ Shows:
 Sensitive fields (like API tokens) are masked for security.
 
 Example:
-  kubectl rbg llm config view`,
+  llmctl config view`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load()
 			if err != nil {
@@ -224,7 +224,7 @@ This command guides you through setting up:
 The wizard will prompt for required configuration values interactively.
 
 Example:
-  kubectl rbg llm config init`,
+  llmctl config init`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Check if config file already exists
 			configPath := config.GetConfigPath()
@@ -233,7 +233,7 @@ Example:
 					fmt.Println("Configuration file already exists!")
 					fmt.Printf("Location: %s\n", configPath)
 					fmt.Println("If you want to reinitialize, please remove the existing config file first.")
-					fmt.Println("Use 'kubectl rbg llm config view' to see current configuration.")
+					fmt.Println("Use 'llmctl config view' to see current configuration.")
 					return nil
 				}
 			}
@@ -298,8 +298,8 @@ Example:
 			fmt.Println("\n=== Configuration Initialized Successfully ===")
 			fmt.Printf("  Storage: %s\n", storageType)
 			fmt.Printf("  Source:  %s\n", sourceType)
-			fmt.Println("\nEngines work with defaults. Use 'kubectl rbg llm config set-engine' to customize.")
-			fmt.Println("Use 'kubectl rbg llm config view' to see the full configuration.")
+			fmt.Println("\nEngines work with defaults. Use 'llmctl config set-engine' to customize.")
+			fmt.Println("Use 'llmctl config view' to see the full configuration.")
 
 			return nil
 		},

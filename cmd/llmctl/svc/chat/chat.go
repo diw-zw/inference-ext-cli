@@ -95,7 +95,7 @@ func NewChatCmd(cf *genericclioptions.ConfigFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "chat <name> [flags]",
 		Short: "Chat with a running LLM inference service",
-		Long: `Connect to an LLM service created by 'kubectl rbg llm svc run' and send messages.
+		Long: `Connect to an LLM service created by 'llmctl svc run' and send messages.
 
 Without --prompt the command enters interactive mode: a persistent chat session
 that accepts input line by line. Type '/exit' or press Ctrl+C to quit.
@@ -103,16 +103,16 @@ that accepts input line by line. Type '/exit' or press Ctrl+C to quit.
 The command locates a ready pod belonging to the named service, establishes a
 port-forward tunnel, and communicates over the OpenAI /v1/chat/completions API.`,
 		Example: `  # Non-interactive: send a single prompt
-  kubectl rbg llm svc chat my-qwen --prompt "What is the capital of France?"
+  llmctl svc chat my-qwen --prompt "What is the capital of France?"
 
   # Interactive session
-  kubectl rbg llm svc chat my-qwen
+  llmctl svc chat my-qwen
   
   # Use a system prompt
-  kubectl rbg llm svc chat my-qwen --system "You are a helpful assistant."
+  llmctl svc chat my-qwen --system "You are a helpful assistant."
 
   # Specify a local port for the tunnel (default: random free port)
-  kubectl rbg llm svc chat my-qwen --local-port 18000`,
+  llmctl svc chat my-qwen --local-port 18000`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
@@ -131,14 +131,14 @@ port-forward tunnel, and communicates over the OpenAI /v1/chat/completions API.`
 
 			annotationVal, ok := rbg.Annotations[llmmeta.RunCommandMetadataAnnotationKey]
 			if !ok {
-				return fmt.Errorf("RoleBasedGroup %q has no CLI metadata annotation; was it created with 'kubectl rbg llm svc run'?", name)
+				return fmt.Errorf("RoleBasedGroup %q has no CLI metadata annotation; was it created with 'llmctl svc run'?", name)
 			}
 			var meta llmmeta.RunMetadata
 			if err := json.Unmarshal([]byte(annotationVal), &meta); err != nil {
 				return fmt.Errorf("failed to parse CLI metadata annotation: %w", err)
 			}
 			if meta.Port == 0 {
-				return fmt.Errorf("service port is not recorded in metadata; please re-create the service with an updated 'kubectl rbg llm svc run'")
+				return fmt.Errorf("service port is not recorded in metadata; please re-create the service with an updated 'llmctl svc run'")
 			}
 
 			// 2. Find a ready pod for the service.

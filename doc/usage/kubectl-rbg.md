@@ -102,20 +102,20 @@ For detailed usage and output examples, see [kubectl-rbg-status](kubectl-rbg-sta
 
 ```bash
 # 1. Initialize configuration (storage and source)
-kubectl rbg llm config init
+llmctl config init
 
 # 2. Pull a model
-kubectl rbg llm model pull Qwen/Qwen3.5-0.8B
+llmctl model pull Qwen/Qwen3.5-0.8B
 
 # 3. Deploy as an inference service
-kubectl rbg llm svc run my-qwen Qwen/Qwen3.5-0.8B
+llmctl svc run my-qwen Qwen/Qwen3.5-0.8B
 
 # 4. Chat with the service
-kubectl rbg llm svc chat my-qwen
+llmctl svc chat my-qwen
 
 # 5. List running services
-kubectl rbg llm svc list
+llmctl svc list
 
 # 6. Delete the service
-kubectl rbg llm svc delete my-qwen
+llmctl svc delete my-qwen
 ```

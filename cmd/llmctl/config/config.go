@@ -36,21 +36,21 @@ This command provides subcommands for:
 
 Examples:
   # Initialize configuration interactively
-  kubectl rbg llm config init
+  llmctl config init
 
   # View current configuration
-  kubectl rbg llm config view
+  llmctl config view
 
   # Add a new storage configuration
-  kubectl rbg llm config add-storage my-pvc --type pvc --config claimName=model-pvc
+  llmctl config add-storage my-pvc --type pvc --config claimName=model-pvc
 
   # Add a new model source
-  kubectl rbg llm config add-source huggingface --type huggingface --config token=hf_xxx
+  llmctl config add-source huggingface --type huggingface --config token=hf_xxx
 
   # List all configurations
-  kubectl rbg llm config get-storages
-  kubectl rbg llm config get-sources
-  kubectl rbg llm config get-engines`,
+  llmctl config get-storages
+  llmctl config get-sources
+  llmctl config get-engines`,
 	}
 
 	// Add subcommands

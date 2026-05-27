@@ -241,8 +241,8 @@ func (o *runOptions) run(ctx context.Context) error {
 	}
 
 	fmt.Printf("Created auto-benchmark Job %q in namespace %q\n", jobName, namespace)
-	fmt.Printf("Monitor with: kubectl rbg llm auto-benchmark status %s\n", expName)
-	fmt.Printf("View logs with: kubectl rbg llm auto-benchmark logs %s\n", expName)
+	fmt.Printf("Monitor with: llmctl auto-benchmark status %s\n", expName)
+	fmt.Printf("View logs with: llmctl auto-benchmark logs %s\n", expName)
 	return nil
 }
 

@@ -44,13 +44,13 @@ Currently supported source types:
 
 Examples:
   # Add a HuggingFace source with command-line flags
-  kubectl rbg llm config add-source huggingface --type huggingface --config token=hf_xxx
+  llmctl config add-source huggingface --type huggingface --config token=hf_xxx
 
   # Add source interactively
-  kubectl rbg llm config add-source huggingface -i`,
+  llmctl config add-source huggingface -i`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'add-source' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config add-source NAME [-i]\n\nSee 'kubectl rbg llm config add-source -h' for examples")
+				return fmt.Errorf("'add-source' requires exactly 1 argument\n\nUsage:\n  llmctl config add-source NAME [-i]\n\nSee 'llmctl config add-source -h' for examples")
 			}
 			return nil
 		},
@@ -114,10 +114,10 @@ With NAME: displays the detailed configuration for the named source.
 
 Examples:
   # List all sources
-  kubectl rbg llm config get-sources
+  llmctl config get-sources
 
   # Show details of a specific source
-  kubectl rbg llm config get-sources huggingface`,
+  llmctl config get-sources huggingface`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load()
@@ -170,10 +170,10 @@ func newUseSourceCmd() *cobra.Command {
 The active source is used by default when downloading models.
 
 Example:
-  kubectl rbg llm config use-source huggingface`,
+  llmctl config use-source huggingface`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'use-source' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config use-source NAME\n\nSee 'kubectl rbg llm config use-source -h' for examples")
+				return fmt.Errorf("'use-source' requires exactly 1 argument\n\nUsage:\n  llmctl config use-source NAME\n\nSee 'llmctl config use-source -h' for examples")
 			}
 			return nil
 		},
@@ -209,10 +209,10 @@ func newSetSourceCmd() *cobra.Command {
 Modify the configuration parameters of a previously added source.
 
 Example:
-  kubectl rbg llm config set-source huggingface --config token=hf_new_token`,
+  llmctl config set-source huggingface --config token=hf_new_token`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'set-source' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config set-source NAME [--config key=value]\n\nSee 'kubectl rbg llm config set-source -h' for examples")
+				return fmt.Errorf("'set-source' requires exactly 1 argument\n\nUsage:\n  llmctl config set-source NAME [--config key=value]\n\nSee 'llmctl config set-source -h' for examples")
 			}
 			return nil
 		},
@@ -256,10 +256,10 @@ func newDeleteSourceCmd() *cobra.Command {
 Note: Cannot delete the currently active source. Switch to another source first.
 
 Example:
-  kubectl rbg llm config delete-source huggingface`,
+  llmctl config delete-source huggingface`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("'delete-source' requires exactly 1 argument\n\nUsage:\n  kubectl rbg llm config delete-source NAME\n\nSee 'kubectl rbg llm config delete-source -h' for examples")
+				return fmt.Errorf("'delete-source' requires exactly 1 argument\n\nUsage:\n  llmctl config delete-source NAME\n\nSee 'llmctl config delete-source -h' for examples")
 			}
 			return nil
 		},

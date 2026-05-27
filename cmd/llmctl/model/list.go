@@ -45,18 +45,18 @@ func newListCmd(cf *genericclioptions.ConfigFlags) *cobra.Command {
 		Long: `List all downloaded models from the configured storage.
 
 This command creates a Kubernetes Job that scans the configured storage and lists
-all models that have been downloaded using 'kubectl rbg llm model pull'. It displays
+all models that have been downloaded using 'llmctl model pull'. It displays
 the model ID, revision, and download timestamp for each model found.
 
 The command requires:
-  - A configured storage (use 'kubectl rbg llm config add-storage' to configure)
+  - A configured storage (use 'llmctl config add-storage' to configure)
 
 Examples:
   # List models in the default storage
-  kubectl rbg llm model list
+  llmctl model list
 
   # List models in a specific storage
-  kubectl rbg llm model list --storage my-pvc
+  llmctl model list --storage my-pvc
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load()
@@ -70,7 +70,7 @@ Examples:
 				storageName = storage
 			}
 			if storageName == "" {
-				return fmt.Errorf("no storage configured, please run 'kubectl rbg llm config add-storage' first")
+				return fmt.Errorf("no storage configured, please run 'llmctl config add-storage' first")
 			}
 
 			storageCfg, err := cfg.GetStorage(storageName)
