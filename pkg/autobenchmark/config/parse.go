@@ -77,9 +77,6 @@ func validateRequiredFields(cfg *AutoBenchmarkConfig) []string {
 	if cfg.Backend == "" {
 		errs = append(errs, "backend: is required")
 	}
-	if len(cfg.SearchSpace) == 0 {
-		errs = append(errs, "searchSpace: is required")
-	}
 	if cfg.Scenario.Name == "" {
 		errs = append(errs, "scenario.name: is required")
 	}

@@ -76,8 +76,11 @@ func NewController(
 	}
 
 	// Validate algorithm name early (don't store; Run creates per-template instances).
-	if _, err := search.Get(cfg.Strategy.Algorithm); err != nil {
-		return nil, fmt.Errorf("creating search algorithm: %w", err)
+	// Skip when no search space — templates will run once with default params.
+	if len(cfg.SearchSpace) > 0 {
+		if _, err := search.Get(cfg.Strategy.Algorithm); err != nil {
+			return nil, fmt.Errorf("creating search algorithm: %w", err)
+		}
 	}
 
 	eval, err := evaluator.Get(cfg.Evaluator.Type)
@@ -132,14 +135,20 @@ func (ctrl *Controller) Run(ctx context.Context) error {
 		return fmt.Errorf("initializing state: %w", err)
 	}
 
-	// Create algorithm instance once; Init will be called per template.
-	algoInstance, err := search.Get(ctrl.cfg.Strategy.Algorithm)
-	if err != nil {
-		return err
-	}
-	// Close subprocess (if any) when the experiment finishes.
-	if closer, ok := algoInstance.(interface{ Close() error }); ok {
-		defer func() { _ = closer.Close() }()
+	hasSearchSpace := len(ctrl.cfg.SearchSpace) > 0
+
+	var algoInstance search.SearchAlgorithm
+	if hasSearchSpace {
+		// Create algorithm instance once; Init will be called per template.
+		var err error
+		algoInstance, err = search.Get(ctrl.cfg.Strategy.Algorithm)
+		if err != nil {
+			return err
+		}
+		// Close subprocess (if any) when the experiment finishes.
+		if closer, ok := algoInstance.(interface{ Close() error }); ok {
+			defer func() { _ = closer.Close() }()
+		}
 	}
 
 	// Template iteration loop
@@ -168,14 +177,16 @@ func (ctrl *Controller) Run(ctx context.Context) error {
 			continue
 		}
 
-		// (Re-)initialize algorithm for this template. The algorithm instance
-		// is created once before the loop; Init reuses the subprocess.
-		if err := algoInstance.Init(ctx, tmplRef.Name, ctrl.cfg.SearchSpace, ctrl.cfg.Strategy); err != nil {
-			return fmt.Errorf("initializing algorithm for template %q: %w", tmplRef.Name, err)
-		}
-		if len(ts.AlgorithmState) > 0 {
-			if err := algoInstance.UnmarshalState(ts.AlgorithmState); err != nil {
-				logger.Info("Failed to restore algorithm state, continuing", "template", tmplRef.Name, "error", err.Error())
+		if hasSearchSpace {
+			// (Re-)initialize algorithm for this template. The algorithm instance
+			// is created once before the loop; Init reuses the subprocess.
+			if err := algoInstance.Init(ctx, tmplRef.Name, ctrl.cfg.SearchSpace, ctrl.cfg.Strategy); err != nil {
+				return fmt.Errorf("initializing algorithm for template %q: %w", tmplRef.Name, err)
+			}
+			if len(ts.AlgorithmState) > 0 {
+				if err := algoInstance.UnmarshalState(ts.AlgorithmState); err != nil {
+					logger.Info("Failed to restore algorithm state, continuing", "template", tmplRef.Name, "error", err.Error())
+				}
 			}
 		}
 
@@ -186,7 +197,11 @@ func (ctrl *Controller) Run(ctx context.Context) error {
 		}
 
 		// Trial loop for this template
-		err = ctrl.runTrials(ctx, expState, ts, tmplIdx, baseRBG, algoInstance)
+		if hasSearchSpace {
+			err = ctrl.runTrials(ctx, expState, ts, tmplIdx, baseRBG, algoInstance)
+		} else {
+			err = ctrl.runSingleTrial(ctx, expState, ts, tmplIdx, baseRBG)
+		}
 		if err != nil {
 			logger.Error(err, "Error running trials", "template", tmplRef.Name)
 		}
@@ -272,6 +287,41 @@ func (ctrl *Controller) runTrials(
 		if err := WriteResultJSON(ctrl.reportDir, resultDetail); err != nil {
 			logger.Error(err, "Failed to write result detail")
 		}
+	}
+
+	return nil
+}
+
+// runSingleTrial runs a single trial with empty params (no search space).
+// Each template is benchmarked once as trial 0 using its default configuration.
+func (ctrl *Controller) runSingleTrial(
+	ctx context.Context,
+	expState *abtypes.ExperimentState,
+	ts *abtypes.TemplateState,
+	tmplIdx int,
+	baseRBG *v1alpha2.RoleBasedGroup,
+) error {
+	logger := log.FromContext(ctx).WithValues("template", ts.Name)
+
+	if len(ts.Trials) > 0 {
+		logger.Info("Single trial already executed, skipping")
+		return nil
+	}
+
+	logger.Info("Starting single trial (no search space)", "trialIndex", 0)
+	result := ctrl.executeTrial(ctx, baseRBG, ts.Name, 0, abtypes.RoleParamSet{})
+	ts.Trials = append(ts.Trials, result)
+
+	// Checkpoint
+	expState.CurrentTemplateIdx = tmplIdx
+	if err := ctrl.state.Save(expState); err != nil {
+		logger.Error(err, "Failed to save checkpoint")
+	}
+
+	// Write incremental result detail
+	resultDetail := BuildResult(expState, ctrl.cfg, time.Time{})
+	if err := WriteResultJSON(ctrl.reportDir, resultDetail); err != nil {
+		logger.Error(err, "Failed to write result detail")
 	}
 
 	return nil

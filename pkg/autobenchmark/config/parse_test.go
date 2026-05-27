@@ -144,11 +144,6 @@ func TestValidate_MissingRequiredFields(t *testing.T) {
 			wantErr: "backend: is required",
 		},
 		{
-			name:    "missing searchSpace",
-			modify:  func(cfg *AutoBenchmarkConfig) { cfg.SearchSpace = nil },
-			wantErr: "searchSpace: is required",
-		},
-		{
 			name:    "missing scenario name",
 			modify:  func(cfg *AutoBenchmarkConfig) { cfg.Scenario.Name = "" },
 			wantErr: "scenario.name: is required",
@@ -386,6 +381,14 @@ func TestValidate_ScenarioMissingFields(t *testing.T) {
 func TestValidate_FullValidConfig(t *testing.T) {
 	cfg, err := Parse([]byte(fullValidConfig()))
 	require.NoError(t, err)
+	err = Validate(cfg, false)
+	assert.NoError(t, err)
+}
+
+func TestValidate_EmptySearchSpace(t *testing.T) {
+	cfg, err := Parse([]byte(fullValidConfig()))
+	require.NoError(t, err)
+	cfg.SearchSpace = nil
 	err = Validate(cfg, false)
 	assert.NoError(t, err)
 }
