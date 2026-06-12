@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -73,6 +74,7 @@ func NewController(
 	if err != nil {
 		return nil, fmt.Errorf("creating builder: %w", err)
 	}
+	builder.SetExcludeDefaultRoles(cfg.ExcludeDefaultRoles)
 
 	// Validate algorithm name early (don't store; Run creates per-template instances).
 	if _, err := search.Get(cfg.Strategy.Algorithm); err != nil {
@@ -382,8 +384,10 @@ func (ctrl *Controller) executeTrial(
 	}
 	rbgCreated = true
 
+	modelName := extractServedModelName(baseRBG)
+
 	// Wait for RBG to be fully ready (Pod Ready + inference endpoint serving).
-	endpoint, err := ctrl.waitRBGFullyReady(trialCtx, trialRBG, trialName, ctrl.rbgReadyTimeout)
+	endpoint, err := ctrl.waitRBGFullyReady(trialCtx, trialRBG, trialName, modelName, ctrl.rbgReadyTimeout)
 	if err != nil {
 		result.Error = fmt.Sprintf("RBG not ready: %v", err)
 		result.EndTime = time.Now()
@@ -395,16 +399,37 @@ func (ctrl *Controller) executeTrial(
 		ctrl.collectFailureLogs(logger, trialName, resultDir, &result)
 		return result
 	}
-	modelName := extractServedModelName(baseRBG)
 
 	// Result directory: {reportDir}/{scenario}/{templateName}/trial-{idx}
 	scenario := ctrl.cfg.Scenario
 	resultDir := filepath.Join(ctrl.reportDir, scenario.Name, templateName, fmt.Sprintf("trial-%d", trialIdx))
 
+	// Run benchmark in-process
+	// Concurrency sweep mode: run multiple concurrency levels, find max under TTFT SLA.
+	if len(scenario.ConcurrencySweep) > 0 {
+		metrics, concurrency, sweepErr, sweepWarning := ctrl.runConcurrencySweep(trialCtx, endpoint, modelName, resultDir, scenario)
+		if sweepErr != "" {
+			result.Error = sweepErr
+		}
+		if sweepWarning != "" {
+			result.Warning = sweepWarning
+		}
+		if metrics != nil {
+			metrics.Concurrency = concurrency
+			result.Metrics = metrics
+			result.Constraints, result.Score = EvaluateSLA(metrics, ctrl.cfg.Objectives)
+		}
+		result.EndTime = time.Now()
+		result.Duration = abtypes.Duration(result.EndTime.Sub(start))
+		logger.Info("Trial completed (sweep)", "feasible", result.IsSLAFeasible(), "score", result.Score,
+			"bestConcurrency", concurrency, "constraints", result.Constraints)
+		return result
+	}
+
 	// Snapshot pod restart counts before benchmark so we can detect mid-run crashes.
 	preRunRestarts := ctrl.snapshotRestartCounts(logger, trialName)
 
-	// Run benchmark in-process
+	// Single concurrency mode (existing behavior).
 	evalCtx := evaluator.EvalContext{
 		Endpoint:  endpoint,
 		ModelName: modelName,
@@ -447,6 +472,152 @@ func (ctrl *Controller) annotateTrialTimeout(result *abtypes.TrialResult, trialC
 	if result.Error != "" && trialCtx.Err() == context.DeadlineExceeded {
 		result.Error = fmt.Sprintf("%s (trial timeout after %s)", result.Error, ctrl.trialTimeout)
 	}
+}
+
+// runConcurrencySweep runs the evaluator at each concurrency level in ascending order,
+// stopping early when TTFT P99 exceeds the SLA threshold. Returns the metrics and
+// concurrency level of the last successful level. If no level passes, returns nil metrics.
+// The warning return value is non-empty when a real execution failure (OOM, crash, timeout)
+// terminated the sweep at a higher level but prior levels had already passed.
+func (ctrl *Controller) runConcurrencySweep(
+	ctx context.Context,
+	endpoint, modelName, resultDir string,
+	scenario config.ScenarioSpec,
+) (bestMetrics *abtypes.Metrics, bestConcurrency int, errMsg string, warning string) {
+	logger := log.FromContext(ctx)
+
+	levels := make([]int, len(scenario.ConcurrencySweep))
+	copy(levels, scenario.ConcurrencySweep)
+	sort.Ints(levels)
+
+	sla := ctrl.cfg.Objectives.SLA
+	maxLevel := levels[len(levels)-1]
+
+	for i, level := range levels {
+		if err := ctx.Err(); err != nil {
+			logger.Info("Sweep aborted due to context cancellation", "concurrency", level)
+			break
+		}
+
+		levelDir := filepath.Join(resultDir, fmt.Sprintf("concurrency-%d", level))
+
+		levelScenario := scenario
+		levelScenario.Concurrency = level
+		levelScenario.ConcurrencySweep = nil
+		levelScenario.MaxRequests = sweepLevelRequests(scenario.MaxRequests, scenario.MinRequests, level, maxLevel)
+
+		evalCtx := evaluator.EvalContext{
+			Endpoint:   endpoint,
+			ModelName:  modelName,
+			Backend:    ctrl.cfg.Backend,
+			Scenario:   levelScenario,
+			OutputDir:  levelDir,
+			SkipWarmup: i > 0, // only first level warms up; subsequent levels reuse warmed KV cache
+		}
+
+		logger.Info("Starting sweep level", "concurrency", level, "maxRequests", levelScenario.MaxRequests)
+
+		if err := ctrl.eval.Run(ctx, evalCtx); err != nil {
+			logger.Error(err, "Sweep level benchmark failed", "concurrency", level)
+			if bestMetrics == nil {
+				errMsg = fmt.Sprintf("sweep benchmark failed at concurrency %d: %v", level, err)
+			} else {
+				warning = fmt.Sprintf("sweep stopped: benchmark failed at concurrency %d: %v (last passing level: %d)", level, err, bestConcurrency)
+				logger.Info("Treating benchmark failure as capacity limit, returning last passing level",
+					"failedConcurrency", level, "bestConcurrency", bestConcurrency)
+			}
+			break
+		}
+
+		metrics, err := ctrl.eval.CollectResults(levelDir)
+		if err != nil {
+			logger.Error(err, "Sweep level collect failed", "concurrency", level)
+			if bestMetrics == nil {
+				errMsg = fmt.Sprintf("sweep collect failed at concurrency %d: %v", level, err)
+			} else {
+				warning = fmt.Sprintf("sweep stopped: collect failed at concurrency %d: %v (last passing level: %d)", level, err, bestConcurrency)
+				logger.Info("Treating collect failure as capacity limit, returning last passing level",
+					"failedConcurrency", level, "bestConcurrency", bestConcurrency)
+			}
+			break
+		}
+
+		logger.Info("Sweep level completed",
+			"concurrency", level,
+			"ttftP99", fmt.Sprintf("%.1f ms", metrics.TTFTP99),
+			"outputThroughput", fmt.Sprintf("%.1f tok/s", metrics.OutputThroughput),
+		)
+
+		// Check all SLA constraints and stop if any is violated
+		violated := checkSLAViolations(metrics, sla)
+		if len(violated) > 0 {
+			logger.Info("SLA constraint(s) violated, stopping sweep",
+				"concurrency", level,
+				"violated", violated,
+			)
+			break
+		}
+
+		bestMetrics = metrics
+		bestConcurrency = level
+	}
+
+	if bestMetrics == nil && errMsg == "" {
+		if ctx.Err() != nil {
+			errMsg = fmt.Sprintf("sweep cancelled before any level completed: %v", ctx.Err())
+		} else {
+			errMsg = "sweep: no concurrency level passed SLA constraints"
+		}
+	}
+
+	return bestMetrics, bestConcurrency, errMsg, warning
+}
+
+// checkSLAViolations checks all SLA constraints and returns descriptions of violated ones.
+// Returns nil if all constraints are satisfied.
+func checkSLAViolations(metrics *abtypes.Metrics, sla config.SLASpec) []string {
+	if metrics == nil {
+		return nil
+	}
+	var violated []string
+	if sla.TTFTP90MaxMs != nil && metrics.TTFTP90 > *sla.TTFTP90MaxMs {
+		violated = append(violated, fmt.Sprintf("ttftP90: %.1f ms > %.1f ms limit", metrics.TTFTP90, *sla.TTFTP90MaxMs))
+	}
+	if sla.TTFTP99MaxMs != nil && metrics.TTFTP99 > *sla.TTFTP99MaxMs {
+		violated = append(violated, fmt.Sprintf("ttftP99: %.1f ms > %.1f ms limit", metrics.TTFTP99, *sla.TTFTP99MaxMs))
+	}
+	if sla.TPOTP90MaxMs != nil && metrics.TPOTP90 > *sla.TPOTP90MaxMs {
+		violated = append(violated, fmt.Sprintf("tpotP90: %.1f ms > %.1f ms limit", metrics.TPOTP90, *sla.TPOTP90MaxMs))
+	}
+	if sla.TPOTP99MaxMs != nil && metrics.TPOTP99 > *sla.TPOTP99MaxMs {
+		violated = append(violated, fmt.Sprintf("tpotP99: %.1f ms > %.1f ms limit", metrics.TPOTP99, *sla.TPOTP99MaxMs))
+	}
+	if sla.ErrorRateMax != nil && metrics.ErrorRate > *sla.ErrorRateMax {
+		violated = append(violated, fmt.Sprintf("errorRate: %.4f > %.4f limit", metrics.ErrorRate, *sla.ErrorRateMax))
+	}
+	return violated
+}
+
+const defaultMinRequests = 50
+
+// sweepLevelRequests scales maxRequests proportionally to the concurrency level,
+// floored at minRequests. This keeps low-concurrency levels fast while giving
+// high-concurrency levels enough requests for stable metrics.
+func sweepLevelRequests(maxRequests, minRequests, level, maxLevel int) int {
+	if maxRequests <= 0 {
+		maxRequests = 500
+	}
+	if minRequests <= 0 {
+		minRequests = defaultMinRequests
+	}
+	if maxLevel <= 0 {
+		return maxRequests
+	}
+	scaled := maxRequests * level / maxLevel
+	if scaled < minRequests {
+		return minRequests
+	}
+	return scaled
 }
 
 // loadOrInitState loads checkpoint or creates new state.

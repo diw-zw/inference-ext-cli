@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -134,20 +135,22 @@ func getRolePodSpec(role *v1alpha2.RoleSpec) *corev1.PodSpec {
 }
 
 // waitRBGFullyReady waits for both the RBG to report Ready=True and the
-// inference endpoint to respond with HTTP 200, sharing a single timeout.
-// A bool tracks whether the RBG ready phase is complete so that subsequent
-// polls only hit the endpoint (reducing unnecessary API calls).
+// inference endpoint to respond with HTTP 200 on /health AND pass a warmup
+// inference request. The warmup probe verifies end-to-end readiness, which is
+// critical for PD disaggregation where router /health may return 200 before
+// prefill/decode workers have fully registered.
 func (ctrl *Controller) waitRBGFullyReady(
 	ctx context.Context,
 	trialRBG *v1alpha2.RoleBasedGroup,
 	trialName string,
+	modelName string,
 	timeout time.Duration,
 ) (endpoint string, err error) {
 	logger := log.FromContext(ctx)
 	rbgReady := false
-	httpClient := &http.Client{Timeout: 5 * time.Second}
+	healthPassed := false
+	httpClient := &http.Client{Timeout: 30 * time.Second}
 
-	// Resolve endpoint once — trialRBG is immutable for the duration of the wait.
 	endpoint = ctrl.resolveEndpoint(trialRBG)
 
 	err = wait.PollUntilContextTimeout(ctx, 10*time.Second, timeout, true, func(ctx context.Context) (bool, error) {
@@ -155,7 +158,7 @@ func (ctrl *Controller) waitRBGFullyReady(
 			rbg, err := ctrl.manager.Get(ctx, trialName)
 			if err != nil {
 				logger.V(2).Info("RBG not found yet", "error", err.Error())
-				return false, nil // retry on transient errors
+				return false, nil
 			}
 			if !isRBGReady(rbg) {
 				return false, nil
@@ -164,24 +167,30 @@ func (ctrl *Controller) waitRBGFullyReady(
 			rbgReady = true
 		}
 
-		healthURL := endpoint + "/health"
-		req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, healthURL, nil)
-		if reqErr != nil {
+		if !healthPassed {
+			healthURL := endpoint + "/health"
+			resp, err := httpClient.Get(healthURL)
+			if err != nil {
+				logger.V(2).Info("Endpoint not ready yet", "error", err.Error())
+				return false, nil
+			}
+			_ = resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				logger.V(2).Info("Endpoint returned non-OK status", "statusCode", resp.StatusCode)
+				return false, nil
+			}
+			logger.Info("Health check passed, sending warmup probe", "endpoint", endpoint)
+			healthPassed = true
+		}
+
+		// Warmup probe: send a real completion request to verify end-to-end readiness.
+		if err := ctrl.warmupProbe(ctx, httpClient, endpoint, modelName); err != nil {
+			logger.V(1).Info("Warmup probe failed, retrying", "error", err.Error())
 			return false, nil
 		}
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			logger.V(2).Info("Endpoint not ready yet", "error", err.Error())
-			return false, nil // retry
-		}
-		defer func() { _ = resp.Body.Close() }()
 
-		if resp.StatusCode == http.StatusOK {
-			logger.Info("Inference endpoint is ready", "healthURL", healthURL)
-			return true, nil
-		}
-		logger.V(2).Info("Endpoint returned non-OK status", "statusCode", resp.StatusCode)
-		return false, nil
+		logger.Info("Inference endpoint is fully ready (warmup passed)", "endpoint", endpoint)
+		return true, nil
 	})
 	return endpoint, err
 }
@@ -211,4 +220,77 @@ func sanitizeLabelValue(name string) string {
 		name = "default"
 	}
 	return name
+}
+
+// warmupProbe sends a minimal inference request to verify the pipeline is
+// functional end-to-end. It first tries /v1/completions; if the engine returns
+// 404 or 405 (route not found), it falls back to /v1/chat/completions for
+// chat-only deployments. Specific 4xx responses are interpreted as follows:
+//   - 400/422: engine is actively processing requests (request format rejected)
+//   - 401/403: engine is reachable but may have auth misconfiguration (logged as warning)
+//   - other 4xx: engine is reachable (logged as warning for operator visibility)
+//
+// Only connection errors and 5xx responses trigger a retry.
+func (ctrl *Controller) warmupProbe(ctx context.Context, client *http.Client, endpoint, modelName string) error {
+	logger := log.FromContext(ctx)
+
+	// Try /v1/completions first.
+	completionsURL := endpoint + "/v1/completions"
+	completionsBody := fmt.Sprintf(`{"model":%q,"prompt":"hi","max_tokens":1}`, modelName)
+
+	statusCode, err := doWarmupRequest(ctx, client, completionsURL, completionsBody)
+	if err != nil {
+		return fmt.Errorf("warmup request failed: %w", err)
+	}
+	if statusCode < 400 {
+		return nil // success
+	}
+
+	// 404/405 means the route doesn't exist — fall back to chat completions.
+	if statusCode == http.StatusNotFound || statusCode == http.StatusMethodNotAllowed {
+		chatURL := endpoint + "/v1/chat/completions"
+		chatBody := fmt.Sprintf(`{"model":%q,"messages":[{"role":"user","content":"hi"}],"max_tokens":1}`, modelName)
+
+		statusCode, err = doWarmupRequest(ctx, client, chatURL, chatBody)
+		if err != nil {
+			return fmt.Errorf("warmup chat request failed: %w", err)
+		}
+		if statusCode < 400 {
+			return nil // success via chat endpoint
+		}
+	}
+
+	// Any 4xx means the engine is reachable. Log a warning for status codes
+	// that may indicate misconfiguration (e.g., auth issues) so operators can
+	// distinguish from genuine request-format rejections (400/422).
+	if statusCode >= 400 && statusCode < 500 {
+		if statusCode == http.StatusUnauthorized || statusCode == http.StatusForbidden {
+			logger.Info("WARNING: warmup probe received auth error — engine is reachable but may have authentication misconfiguration",
+				"statusCode", statusCode, "endpoint", endpoint)
+		} else if statusCode != http.StatusBadRequest && statusCode != http.StatusUnprocessableEntity {
+			logger.Info("Warmup probe received unexpected 4xx — treating as reachable",
+				"statusCode", statusCode, "endpoint", endpoint)
+		}
+		return nil
+	}
+
+	// 5xx: server-side error, not ready yet.
+	return fmt.Errorf("warmup returned HTTP %d", statusCode)
+}
+
+// doWarmupRequest sends a POST request and returns the HTTP status code.
+// The response body is always closed.
+func doWarmupRequest(ctx context.Context, client *http.Client, url, body string) (int, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(body))
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	_ = resp.Body.Close()
+	return resp.StatusCode, nil
 }

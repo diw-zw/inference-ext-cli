@@ -275,6 +275,18 @@ func parseToleration(s string) (corev1.Toleration, error) {
 	}, nil
 }
 
+func parseTolerations(tolerationFlags []string) ([]corev1.Toleration, error) {
+	var result []corev1.Toleration
+	for _, t := range tolerationFlags {
+		tol, err := parseToleration(t)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, tol)
+	}
+	return result, nil
+}
+
 // applyFlagOverrides applies flag values onto a ModeConfig.
 // For Image, DistributedSize, ShmSize: flag value overrides config when non-zero.
 // For Resources: flag values are merged by key (flag wins on conflict).
@@ -325,13 +337,12 @@ func applyFlagOverrides(modeCfg *runpkg.ModeConfig, p RunParams) error {
 		}
 	}
 	modeCfg.Args = append(modeCfg.Args, p.ArgsList...)
-	for _, t := range p.Tolerations {
-		tol, err := parseToleration(t)
-		if err != nil {
-			return err
-		}
-		modeCfg.Tolerations = append(modeCfg.Tolerations, tol)
+	tols, err := parseTolerations(p.Tolerations)
+	if err != nil {
+		return err
 	}
+	modeCfg.Tolerations = append(modeCfg.Tolerations, tols...)
+
 	modeCfg.ImagePullSecrets = append(modeCfg.ImagePullSecrets, p.ImagePullSecrets...)
 	// Validate the merged list (flag-provided + YAML-loaded entries) so that
 	// empty names from either source are caught early with a clear error.
@@ -462,7 +473,7 @@ func generateRBG(name, modelID, namespace string, p RunParams, userCfg *cliconfi
 		return nil, llmmeta.RunMetadata{}, fmt.Errorf("engine %q generated pattern with no containers", modeRes.engineType)
 	}
 
-	// 4b. Apply tolerations, imagePullSecrets, hostNetwork, and nodeSelector to pod template
+	// 5. Apply tolerations, imagePullSecrets, hostNetwork, and nodeSelector to pod template
 	if len(opts.Tolerations) > 0 {
 		podTemplate.Spec.Tolerations = append(podTemplate.Spec.Tolerations, opts.Tolerations...)
 	}
@@ -481,7 +492,7 @@ func generateRBG(name, modelID, namespace string, p RunParams, userCfg *cliconfi
 		}
 	}
 
-	// 5. Mount storage
+	// 6. Mount storage
 	if storageRes.storagePlugin != nil && storageRes.storageName != "" {
 		mountOpts := storageplugin.MountOptions{
 			StorageName: storageRes.storageName,
@@ -501,7 +512,7 @@ func generateRBG(name, modelID, namespace string, p RunParams, userCfg *cliconfi
 		}
 	}
 
-	// 6. Add model prefetch lifecycle hook
+	// 7. Add model prefetch lifecycle hook
 	if p.ModelPrefetch {
 		container := &podTemplate.Spec.Containers[0]
 		// Pass model path via environment variable to prevent shell injection.
@@ -536,7 +547,7 @@ func generateRBG(name, modelID, namespace string, p RunParams, userCfg *cliconfi
 		}
 	}
 
-	// 7. Extract port and build metadata
+	// 8. Extract port and build metadata
 	var resolvedPort int32
 	for _, cp := range podTemplate.Spec.Containers[0].Ports {
 		if cp.Name == "http" {
@@ -552,7 +563,7 @@ func generateRBG(name, modelID, namespace string, p RunParams, userCfg *cliconfi
 		Port:     resolvedPort,
 	}
 
-	// 8. Assemble RBG
+	// 9. Assemble RBG
 	rbg := assembleRBG(name, namespace, pattern, metadata, p.Replicas)
 
 	return rbg, metadata, nil

@@ -134,6 +134,62 @@ func TestBuilder_BuildTrial_DisaggRoleSpecificOverlay(t *testing.T) {
 	assert.NotContains(t, decodeCmd, "--chunked-prefill-size")
 }
 
+func TestBuilder_BuildTrial_ExcludeDefaultRoles(t *testing.T) {
+	base, err := LoadTemplate(testdataPath("disagg-rbg.yaml"))
+	require.NoError(t, err)
+
+	builder, err := NewBuilder("sglang")
+	require.NoError(t, err)
+	// Exclude "decode" from receiving default params
+	builder.SetExcludeDefaultRoles([]string{"decode"})
+
+	params := abtypes.RoleParamSet{
+		"default": abtypes.ParamSet{
+			"maxNumSeqs": 256,
+		},
+	}
+
+	trial, err := builder.BuildTrial(base, 0, params)
+	require.NoError(t, err)
+
+	// Prefill role should receive default params (--max-running-requests 256)
+	prefillCmd := trial.Spec.Roles[0].StandalonePattern.Template.Spec.Containers[0].Command
+	assert.Contains(t, prefillCmd, "--max-running-requests")
+
+	// Decode role is excluded from defaults → should NOT have --max-running-requests appended
+	decodeCmd := trial.Spec.Roles[1].StandalonePattern.Template.Spec.Containers[0].Command
+	assert.NotContains(t, decodeCmd, "--max-running-requests")
+}
+
+func TestBuilder_BuildTrial_ExcludeDefaultRoles_RoleSpecificStillApplies(t *testing.T) {
+	base, err := LoadTemplate(testdataPath("disagg-rbg.yaml"))
+	require.NoError(t, err)
+
+	builder, err := NewBuilder("sglang")
+	require.NoError(t, err)
+	builder.SetExcludeDefaultRoles([]string{"decode"})
+
+	params := abtypes.RoleParamSet{
+		"default": abtypes.ParamSet{
+			"maxNumSeqs": 256,
+		},
+		// Role-specific params should still apply even to excluded roles
+		"decode": abtypes.ParamSet{
+			"gpuMemoryUtilization": 0.80,
+		},
+	}
+
+	trial, err := builder.BuildTrial(base, 0, params)
+	require.NoError(t, err)
+
+	// Decode role: should have role-specific param but NOT default
+	decodeCmd := trial.Spec.Roles[1].StandalonePattern.Template.Spec.Containers[0].Command
+	assert.NotContains(t, decodeCmd, "--max-running-requests")
+	idx := indexOf(decodeCmd, "--mem-fraction-static")
+	require.NotEqual(t, -1, idx)
+	assert.Equal(t, "0.8", decodeCmd[idx+1])
+}
+
 func TestBuilder_BuildTrial_FlagReplaceVsAppend(t *testing.T) {
 	base, err := LoadTemplate(testdataPath("agg-rbg.yaml"))
 	require.NoError(t, err)

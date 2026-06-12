@@ -243,8 +243,8 @@ func TestGenAIBench_CollectResults(t *testing.T) {
 						NumErrorRequests:          1,
 						NumRequests:               100,
 						Stats: map[string]stats{
-							"ttft": {P50: 12.5, P99: 45.0},
-							"tpot": {P50: 3.2, P99: 8.7},
+							"ttft": {P50: 12.5, P90: 30.0, P99: 45.0},
+							"tpot": {P50: 3.2, P90: 6.0, P99: 8.7},
 						},
 					},
 				},
@@ -262,8 +262,10 @@ func TestGenAIBench_CollectResults(t *testing.T) {
 				assert.Equal(t, 1, m.NumErrorRequests)
 				assert.Equal(t, 100, m.NumRequests)
 				assert.InDelta(t, 12.5, m.TTFTP50, 0.01)
+				assert.InDelta(t, 30.0, m.TTFTP90, 0.01)
 				assert.InDelta(t, 45.0, m.TTFTP99, 0.01)
 				assert.InDelta(t, 3.2, m.TPOTP50, 0.01)
+				assert.InDelta(t, 6.0, m.TPOTP90, 0.01)
 				assert.InDelta(t, 8.7, m.TPOTP99, 0.01)
 			},
 		},
@@ -279,8 +281,8 @@ func TestGenAIBench_CollectResults(t *testing.T) {
 						NumErrorRequests:     1,
 						NumRequests:          100,
 						Stats: map[string]stats{
-							"ttft": {P50: 10.0, P99: 40.0},
-							"tpot": {P50: 3.0, P99: 8.0},
+							"ttft": {P50: 10.0, P90: 25.0, P99: 40.0},
+							"tpot": {P50: 3.0, P90: 5.0, P99: 8.0},
 						},
 					},
 				},
@@ -293,8 +295,8 @@ func TestGenAIBench_CollectResults(t *testing.T) {
 						NumErrorRequests:     5,
 						NumRequests:          100,
 						Stats: map[string]stats{
-							"ttft": {P50: 20.0, P99: 80.0},
-							"tpot": {P50: 5.0, P99: 12.0},
+							"ttft": {P50: 20.0, P90: 50.0, P99: 80.0},
+							"tpot": {P50: 5.0, P90: 9.0, P99: 12.0},
 						},
 					},
 				},
@@ -315,8 +317,10 @@ func TestGenAIBench_CollectResults(t *testing.T) {
 				assert.Equal(t, 200, m.NumRequests)
 				// Latency worst-case: max across files
 				assert.InDelta(t, 20.0, m.TTFTP50, 0.01)
+				assert.InDelta(t, 50.0, m.TTFTP90, 0.01)
 				assert.InDelta(t, 80.0, m.TTFTP99, 0.01)
 				assert.InDelta(t, 5.0, m.TPOTP50, 0.01)
+				assert.InDelta(t, 9.0, m.TPOTP90, 0.01)
 				assert.InDelta(t, 12.0, m.TPOTP99, 0.01)
 			},
 		},
@@ -328,6 +332,7 @@ func TestGenAIBench_CollectResults(t *testing.T) {
 					AggregatedMetrics: aggregatedMetrics{
 						MeanOutputThroughput: 500.0,
 						RequestsPerSecond:    10.0,
+						NumCompletedRequests: 50,
 						NumRequests:          50,
 					},
 				},
@@ -347,6 +352,8 @@ func TestGenAIBench_CollectResults(t *testing.T) {
 					AggregatedMetrics: aggregatedMetrics{
 						MeanOutputThroughput: 100.0,
 						RequestsPerSecond:    10.0,
+						NumCompletedRequests: 10,
+						NumRequests:          10,
 						Stats:                nil,
 					},
 				},

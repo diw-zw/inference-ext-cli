@@ -396,7 +396,7 @@ func TestInferencePerf_CollectResults(t *testing.T) {
 	t.Run("single stage file", func(t *testing.T) {
 		dir := setupInfPerfResults(t, map[string]infPerfStageResult{
 			"stage_0_lifecycle_metrics.json": {
-				Successes: makeSuccesses(100, 0.050, 0.200, 0.005, 0.015, 1500, 800, 2300, 25),
+				Successes: makeSuccesses(100, 0.050, 0.100, 0.200, 0.005, 0.010, 0.015, 1500, 800, 2300, 25),
 				Failures:  makeFailures(2),
 			},
 		})
@@ -407,8 +407,10 @@ func TestInferencePerf_CollectResults(t *testing.T) {
 
 		// Latency: seconds -> milliseconds
 		assert.InDelta(t, 50.0, m.TTFTP50, 0.01)
+		assert.InDelta(t, 100.0, m.TTFTP90, 0.01)
 		assert.InDelta(t, 200.0, m.TTFTP99, 0.01)
 		assert.InDelta(t, 5.0, m.TPOTP50, 0.01)
+		assert.InDelta(t, 10.0, m.TPOTP90, 0.01)
 		assert.InDelta(t, 15.0, m.TPOTP99, 0.01)
 
 		assert.InDelta(t, 1500.0, m.OutputThroughput, 0.01)
@@ -425,11 +427,11 @@ func TestInferencePerf_CollectResults(t *testing.T) {
 	t.Run("multiple stage files aggregated", func(t *testing.T) {
 		dir := setupInfPerfResults(t, map[string]infPerfStageResult{
 			"stage_0_lifecycle_metrics.json": {
-				Successes: makeSuccesses(200, 0.010, 0.050, 0.003, 0.008, 1000, 500, 1500, 20),
+				Successes: makeSuccesses(200, 0.010, 0.030, 0.050, 0.003, 0.006, 0.008, 1000, 500, 1500, 20),
 				Failures:  makeFailures(0),
 			},
 			"stage_1_lifecycle_metrics.json": {
-				Successes: makeSuccesses(200, 0.020, 0.100, 0.005, 0.020, 2000, 1000, 3000, 40),
+				Successes: makeSuccesses(200, 0.020, 0.060, 0.100, 0.005, 0.012, 0.020, 2000, 1000, 3000, 40),
 				Failures:  makeFailures(10),
 			},
 		})
@@ -440,8 +442,10 @@ func TestInferencePerf_CollectResults(t *testing.T) {
 
 		// Latency: worst-case across stages (in ms)
 		assert.InDelta(t, 20.0, m.TTFTP50, 0.01)  // max(10, 20)
+		assert.InDelta(t, 60.0, m.TTFTP90, 0.01)  // max(30, 60)
 		assert.InDelta(t, 100.0, m.TTFTP99, 0.01) // max(50, 100)
 		assert.InDelta(t, 5.0, m.TPOTP50, 0.01)   // max(3, 5)
+		assert.InDelta(t, 12.0, m.TPOTP90, 0.01)  // max(6, 12)
 		assert.InDelta(t, 20.0, m.TPOTP99, 0.01)  // max(8, 20)
 
 		// Throughput: averaged
@@ -465,7 +469,7 @@ func TestInferencePerf_CollectResults(t *testing.T) {
 		require.NoError(t, os.MkdirAll(reportsDir, 0755))
 
 		summary := infPerfStageResult{
-			Successes: makeSuccesses(500, 0.025, 0.080, 0.004, 0.012, 1800, 900, 2700, 30),
+			Successes: makeSuccesses(500, 0.025, 0.050, 0.080, 0.004, 0.008, 0.012, 1800, 900, 2700, 30),
 			Failures:  makeFailures(5),
 		}
 		writeJSON(t, filepath.Join(reportsDir, "summary_lifecycle_metrics.json"), summary)
@@ -496,11 +500,11 @@ func TestInferencePerf_CollectResults(t *testing.T) {
 		require.NoError(t, os.MkdirAll(newDir, 0755))
 
 		oldSummary := infPerfStageResult{
-			Successes: makeSuccesses(100, 0.050, 0.150, 0.010, 0.030, 500, 250, 750, 10),
+			Successes: makeSuccesses(100, 0.050, 0.100, 0.150, 0.010, 0.020, 0.030, 500, 250, 750, 10),
 			Failures:  makeFailures(50),
 		}
 		newSummary := infPerfStageResult{
-			Successes: makeSuccesses(500, 0.025, 0.080, 0.004, 0.012, 1800, 900, 2700, 30),
+			Successes: makeSuccesses(500, 0.025, 0.050, 0.080, 0.004, 0.008, 0.012, 1800, 900, 2700, 30),
 			Failures:  makeFailures(5),
 		}
 		writeJSON(t, filepath.Join(oldDir, "summary_lifecycle_metrics.json"), oldSummary)
@@ -528,7 +532,7 @@ func TestInferencePerf_CollectResults(t *testing.T) {
 		))
 		// Also provide a valid summary to verify we don't silently fall back to it
 		summary := infPerfStageResult{
-			Successes: makeSuccesses(500, 0.025, 0.080, 0.004, 0.012, 1800, 900, 2700, 30),
+			Successes: makeSuccesses(500, 0.025, 0.050, 0.080, 0.004, 0.008, 0.012, 1800, 900, 2700, 30),
 			Failures:  makeFailures(5),
 		}
 		writeJSON(t, filepath.Join(reportsDir, "summary_lifecycle_metrics.json"), summary)
@@ -545,19 +549,878 @@ func TestInferencePerf_CollectResults(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("zero total requests handles division by zero", func(t *testing.T) {
+	t.Run("zero total requests returns error", func(t *testing.T) {
 		dir := setupInfPerfResults(t, map[string]infPerfStageResult{
 			"stage_0_lifecycle_metrics.json": {
-				Successes: makeSuccesses(0, 0, 0, 0, 0, 0, 0, 0, 0),
+				Successes: makeSuccesses(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 				Failures:  makeFailures(0),
 			},
 		})
 
 		ip := &InferencePerf{}
+		_, err := ip.CollectResults(dir)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "0 successes")
+	})
+
+	t.Run("all requests failed returns error", func(t *testing.T) {
+		dir := setupInfPerfResults(t, map[string]infPerfStageResult{
+			"stage_0_lifecycle_metrics.json": {
+				Successes: makeSuccesses(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+				Failures:  makeFailures(500),
+			},
+		})
+
+		ip := &InferencePerf{}
+		_, err := ip.CollectResults(dir)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "all 500 requests failed")
+	})
+}
+
+func TestInferencePerf_Init_ConversationReplay(t *testing.T) {
+	t.Run("valid full config", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"conversationReplay": map[string]interface{}{
+				"seed":                  42,
+				"numConversations":      200,
+				"sharedSystemPromptLen": 6000,
+				"dynamicSystemPromptLen": map[string]interface{}{
+					"type":   "normal",
+					"min":    2000.0,
+					"max":    10000.0,
+					"mean":   5000.0,
+					"stdDev": 1500.0,
+				},
+				"turnsPerConversation": map[string]interface{}{
+					"type":   "normal",
+					"min":    3.0,
+					"max":    10.0,
+					"mean":   6.0,
+					"stdDev": 2.0,
+				},
+				"inputTokensPerTurn": map[string]interface{}{
+					"type":   "lognormal",
+					"min":    256.0,
+					"max":    6000.0,
+					"mean":   1500.0,
+					"stdDev": 1200.0,
+				},
+				"outputTokensPerTurn": map[string]interface{}{
+					"type":   "lognormal",
+					"min":    128.0,
+					"max":    3000.0,
+					"mean":   800.0,
+					"stdDev": 400.0,
+				},
+				"toolCallLatencySec": map[string]interface{}{
+					"type":   "lognormal",
+					"min":    1.0,
+					"max":    30.0,
+					"mean":   8.0,
+					"stdDev": 6.0,
+				},
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, ip.conversationReplay)
+		assert.Equal(t, 42, ip.conversationReplay.Seed)
+		assert.Equal(t, 200, ip.conversationReplay.NumConversations)
+		assert.Equal(t, 6000, ip.conversationReplay.SharedSystemPromptLen)
+		require.NotNil(t, ip.conversationReplay.TurnsPerConversation)
+		assert.Equal(t, "normal", ip.conversationReplay.TurnsPerConversation.Type)
+		require.NotNil(t, ip.conversationReplay.ToolCallLatencySec)
+		assert.Equal(t, "lognormal", ip.conversationReplay.ToolCallLatencySec.Type)
+	})
+
+	t.Run("minimal config without optional fields", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"conversationReplay": map[string]interface{}{
+				"numConversations": 100,
+				"turnsPerConversation": map[string]interface{}{
+					"type": "normal",
+					"min":  2.0,
+					"max":  8.0,
+					"mean": 4.0,
+				},
+				"inputTokensPerTurn": map[string]interface{}{
+					"type": "uniform",
+					"min":  100.0,
+					"max":  2000.0,
+				},
+				"outputTokensPerTurn": map[string]interface{}{
+					"type": "fixed",
+					"min":  500.0,
+					"max":  500.0,
+				},
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, ip.conversationReplay)
+		assert.Nil(t, ip.conversationReplay.DynamicSystemPromptLen)
+		assert.Nil(t, ip.conversationReplay.ToolCallLatencySec)
+	})
+
+	t.Run("missing required turnsPerConversation", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"conversationReplay": map[string]interface{}{
+				"numConversations": 100,
+				"inputTokensPerTurn": map[string]interface{}{
+					"type": "normal",
+					"min":  100.0,
+					"max":  2000.0,
+				},
+				"outputTokensPerTurn": map[string]interface{}{
+					"type": "normal",
+					"min":  50.0,
+					"max":  1000.0,
+				},
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "turnsPerConversation is required")
+	})
+
+	t.Run("invalid numConversations", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"conversationReplay": map[string]interface{}{
+				"numConversations": 0,
+				"turnsPerConversation": map[string]interface{}{
+					"type": "normal",
+					"min":  2.0,
+					"max":  8.0,
+				},
+				"inputTokensPerTurn": map[string]interface{}{
+					"type": "normal",
+					"min":  100.0,
+					"max":  2000.0,
+				},
+				"outputTokensPerTurn": map[string]interface{}{
+					"type": "normal",
+					"min":  50.0,
+					"max":  1000.0,
+				},
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "numConversations must be positive")
+	})
+
+	t.Run("invalid distribution type", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"conversationReplay": map[string]interface{}{
+				"numConversations": 100,
+				"turnsPerConversation": map[string]interface{}{
+					"type": "invalid",
+					"min":  2.0,
+					"max":  8.0,
+				},
+				"inputTokensPerTurn": map[string]interface{}{
+					"type": "normal",
+					"min":  100.0,
+					"max":  2000.0,
+				},
+				"outputTokensPerTurn": map[string]interface{}{
+					"type": "normal",
+					"min":  50.0,
+					"max":  1000.0,
+				},
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported value \"invalid\"")
+	})
+
+	t.Run("min > max in distribution", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"conversationReplay": map[string]interface{}{
+				"numConversations": 100,
+				"turnsPerConversation": map[string]interface{}{
+					"type": "normal",
+					"min":  10.0,
+					"max":  2.0,
+				},
+				"inputTokensPerTurn": map[string]interface{}{
+					"type": "normal",
+					"min":  100.0,
+					"max":  2000.0,
+				},
+				"outputTokensPerTurn": map[string]interface{}{
+					"type": "normal",
+					"min":  50.0,
+					"max":  1000.0,
+				},
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "min (10) must be <= max (2)")
+	})
+}
+
+func TestInferencePerf_BuildConfig_ConversationReplay(t *testing.T) {
+	t.Run("full conversation_replay config", func(t *testing.T) {
+		ip := &InferencePerf{
+			conversationReplay: &ConversationReplayConfig{
+				Seed:                  42,
+				NumConversations:      200,
+				SharedSystemPromptLen: 6000,
+				DynamicSystemPromptLen: &DistributionParamConfig{
+					Type:   "normal",
+					Min:    float64Ptr(2000),
+					Max:    float64Ptr(10000),
+					Mean:   float64Ptr(5000),
+					StdDev: float64Ptr(1500),
+				},
+				TurnsPerConversation: &DistributionParamConfig{
+					Type:   "normal",
+					Min:    float64Ptr(3),
+					Max:    float64Ptr(10),
+					Mean:   float64Ptr(6),
+					StdDev: float64Ptr(2),
+				},
+				InputTokensPerTurn: &DistributionParamConfig{
+					Type:   "lognormal",
+					Min:    float64Ptr(256),
+					Max:    float64Ptr(6000),
+					Mean:   float64Ptr(1500),
+					StdDev: float64Ptr(1200),
+				},
+				OutputTokensPerTurn: &DistributionParamConfig{
+					Type:   "lognormal",
+					Min:    float64Ptr(128),
+					Max:    float64Ptr(3000),
+					Mean:   float64Ptr(800),
+					StdDev: float64Ptr(400),
+				},
+				ToolCallLatencySec: &DistributionParamConfig{
+					Type:   "lognormal",
+					Min:    float64Ptr(1),
+					Max:    float64Ptr(30),
+					Mean:   float64Ptr(8),
+					StdDev: float64Ptr(6),
+				},
+			},
+		}
+		cfg, err := ip.buildConfig(EvalContext{
+			Endpoint:  "http://svc:8000",
+			ModelName: "my-model",
+			Scenario: config.ScenarioSpec{
+				Workload:    "conversation_replay",
+				Concurrency: 8,
+				MaxRequests: 1000,
+			},
+		})
+		require.NoError(t, err)
+
+		assert.Equal(t, "conversation_replay", cfg.Data.Type)
+		require.NotNil(t, cfg.Data.ConversationReplay)
+		cr := cfg.Data.ConversationReplay
+		assert.Equal(t, 42, cr.Seed)
+		assert.Equal(t, 200, cr.NumConversations)
+		assert.Equal(t, 6000, cr.SharedSystemPromptLen)
+
+		require.NotNil(t, cr.DynamicSystemPromptLen)
+		assert.Equal(t, "normal", cr.DynamicSystemPromptLen.Type)
+		assert.Equal(t, float64(5000), *cr.DynamicSystemPromptLen.Mean)
+
+		require.NotNil(t, cr.TurnsPerConversation)
+		assert.Equal(t, "normal", cr.TurnsPerConversation.Type)
+
+		require.NotNil(t, cr.ToolCallLatencySec)
+		assert.Equal(t, "lognormal", cr.ToolCallLatencySec.Type)
+		assert.Equal(t, float64(8), *cr.ToolCallLatencySec.Mean)
+
+		assert.Nil(t, cfg.Data.InputDistribution)
+		assert.Nil(t, cfg.Data.OutputDistribution)
+	})
+
+	t.Run("seed falls back to baseSeed", func(t *testing.T) {
+		baseSeed := 99
+		ip := &InferencePerf{
+			baseSeed: &baseSeed,
+			conversationReplay: &ConversationReplayConfig{
+				NumConversations: 100,
+				TurnsPerConversation: &DistributionParamConfig{
+					Type: "normal",
+					Min:  float64Ptr(2),
+					Max:  float64Ptr(8),
+				},
+				InputTokensPerTurn: &DistributionParamConfig{
+					Type: "uniform",
+					Min:  float64Ptr(100),
+					Max:  float64Ptr(2000),
+				},
+				OutputTokensPerTurn: &DistributionParamConfig{
+					Type: "uniform",
+					Min:  float64Ptr(50),
+					Max:  float64Ptr(1000),
+				},
+			},
+		}
+		cfg, err := ip.buildConfig(EvalContext{
+			Endpoint:  "http://svc:8000",
+			ModelName: "my-model",
+			Scenario: config.ScenarioSpec{
+				Workload:    "conversation_replay",
+				Concurrency: 4,
+			},
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 99, cfg.Data.ConversationReplay.Seed)
+	})
+
+	t.Run("without optional fields", func(t *testing.T) {
+		ip := &InferencePerf{
+			conversationReplay: &ConversationReplayConfig{
+				NumConversations: 50,
+				TurnsPerConversation: &DistributionParamConfig{
+					Type: "normal",
+					Min:  float64Ptr(2),
+					Max:  float64Ptr(5),
+				},
+				InputTokensPerTurn: &DistributionParamConfig{
+					Type: "uniform",
+					Min:  float64Ptr(100),
+					Max:  float64Ptr(1000),
+				},
+				OutputTokensPerTurn: &DistributionParamConfig{
+					Type: "uniform",
+					Min:  float64Ptr(50),
+					Max:  float64Ptr(500),
+				},
+			},
+		}
+		cfg, err := ip.buildConfig(EvalContext{
+			Endpoint:  "http://svc:8000",
+			ModelName: "my-model",
+			Scenario: config.ScenarioSpec{
+				Workload:    "conversation_replay",
+				Concurrency: 4,
+			},
+		})
+		require.NoError(t, err)
+		assert.Nil(t, cfg.Data.ConversationReplay.DynamicSystemPromptLen)
+		assert.Nil(t, cfg.Data.ConversationReplay.ToolCallLatencySec)
+	})
+
+	t.Run("missing conversationReplay config returns error", func(t *testing.T) {
+		ip := &InferencePerf{}
+		_, err := ip.buildConfig(EvalContext{
+			Endpoint:  "http://svc:8000",
+			ModelName: "my-model",
+			Scenario: config.ScenarioSpec{
+				Workload:    "conversation_replay",
+				Concurrency: 4,
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "conversationReplay config is required")
+	})
+
+	t.Run("YAML serialization produces correct format", func(t *testing.T) {
+		ip := &InferencePerf{
+			tokenizerSource: "Qwen/Qwen3-8B",
+			conversationReplay: &ConversationReplayConfig{
+				Seed:                  42,
+				NumConversations:      200,
+				SharedSystemPromptLen: 6000,
+				DynamicSystemPromptLen: &DistributionParamConfig{
+					Type:   "normal",
+					Min:    float64Ptr(2000),
+					Max:    float64Ptr(10000),
+					Mean:   float64Ptr(5000),
+					StdDev: float64Ptr(1500),
+				},
+				TurnsPerConversation: &DistributionParamConfig{
+					Type:   "normal",
+					Min:    float64Ptr(3),
+					Max:    float64Ptr(10),
+					Mean:   float64Ptr(6),
+					StdDev: float64Ptr(2),
+				},
+				InputTokensPerTurn: &DistributionParamConfig{
+					Type:   "lognormal",
+					Min:    float64Ptr(256),
+					Max:    float64Ptr(6000),
+					Mean:   float64Ptr(1500),
+					StdDev: float64Ptr(1200),
+				},
+				OutputTokensPerTurn: &DistributionParamConfig{
+					Type:   "lognormal",
+					Min:    float64Ptr(128),
+					Max:    float64Ptr(3000),
+					Mean:   float64Ptr(800),
+					StdDev: float64Ptr(400),
+				},
+				ToolCallLatencySec: &DistributionParamConfig{
+					Type:   "lognormal",
+					Min:    float64Ptr(1),
+					Max:    float64Ptr(30),
+					Mean:   float64Ptr(8),
+					StdDev: float64Ptr(6),
+				},
+			},
+		}
+		cfg, err := ip.buildConfig(EvalContext{
+			Endpoint:  "http://svc:8000",
+			ModelName: "my-model",
+			Backend:   "sglang",
+			Scenario: config.ScenarioSpec{
+				Workload:    "conversation_replay",
+				Concurrency: 8,
+				MaxRequests: 1000,
+			},
+		})
+		require.NoError(t, err)
+
+		data, err := yaml.Marshal(cfg)
+		require.NoError(t, err)
+
+		var roundtrip infPerfConfig
+		require.NoError(t, yaml.Unmarshal(data, &roundtrip))
+		assert.Equal(t, "conversation_replay", roundtrip.Data.Type)
+		require.NotNil(t, roundtrip.Data.ConversationReplay)
+		assert.Equal(t, 42, roundtrip.Data.ConversationReplay.Seed)
+		assert.Equal(t, 200, roundtrip.Data.ConversationReplay.NumConversations)
+		assert.Equal(t, 6000, roundtrip.Data.ConversationReplay.SharedSystemPromptLen)
+		require.NotNil(t, roundtrip.Data.ConversationReplay.TurnsPerConversation)
+		assert.Equal(t, "normal", roundtrip.Data.ConversationReplay.TurnsPerConversation.Type)
+		require.NotNil(t, roundtrip.Data.ConversationReplay.ToolCallLatencySec)
+		assert.Equal(t, "lognormal", roundtrip.Data.ConversationReplay.ToolCallLatencySec.Type)
+
+		yamlStr := string(data)
+		assert.Contains(t, yamlStr, "conversation_replay")
+		assert.Contains(t, yamlStr, "num_conversations")
+		assert.Contains(t, yamlStr, "shared_system_prompt_len")
+		assert.Contains(t, yamlStr, "turns_per_conversation")
+		assert.Contains(t, yamlStr, "tool_call_latency_sec")
+		assert.Contains(t, yamlStr, "std_dev")
+	})
+}
+
+func float64Ptr(v float64) *float64 { return &v }
+func intPtr(v int) *int             { return &v }
+
+func TestInferencePerf_Init_Warmup(t *testing.T) {
+	t.Run("valid numRequests", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"warmup": map[string]interface{}{
+				"numRequests": 50,
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, ip.warmup)
+		require.NotNil(t, ip.warmup.NumRequests)
+		assert.Equal(t, 50, *ip.warmup.NumRequests)
+		assert.Nil(t, ip.warmup.Ratio)
+	})
+
+	t.Run("valid numRequests as float64 (YAML/JSON decode)", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"warmup": map[string]interface{}{
+				"numRequests": float64(100),
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, ip.warmup)
+		require.NotNil(t, ip.warmup.NumRequests)
+		assert.Equal(t, 100, *ip.warmup.NumRequests)
+	})
+
+	t.Run("valid ratio", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"warmup": map[string]interface{}{
+				"ratio": 0.1,
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, ip.warmup)
+		assert.Nil(t, ip.warmup.NumRequests)
+		require.NotNil(t, ip.warmup.Ratio)
+		assert.Equal(t, 0.1, *ip.warmup.Ratio)
+	})
+
+	t.Run("valid ratio as int", func(t *testing.T) {
+		// edge case: int value for ratio (unlikely but supported)
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"warmup": map[string]interface{}{
+				"ratio": 0, // this should fail validation (ratio must be > 0)
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ratio must be between 0 and 1")
+	})
+
+	t.Run("numRequests takes priority when both specified", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"warmup": map[string]interface{}{
+				"numRequests": 50,
+				"ratio":       0.2,
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, ip.warmup)
+		require.NotNil(t, ip.warmup.NumRequests)
+		assert.Equal(t, 50, *ip.warmup.NumRequests)
+		require.NotNil(t, ip.warmup.Ratio)
+		assert.Equal(t, 0.2, *ip.warmup.Ratio)
+	})
+
+	t.Run("neither numRequests nor ratio returns error", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"warmup": map[string]interface{}{},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "numRequests or ratio must be specified")
+	})
+
+	t.Run("zero numRequests returns error", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"warmup": map[string]interface{}{
+				"numRequests": 0,
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "numRequests must be positive")
+	})
+
+	t.Run("negative numRequests returns error", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"warmup": map[string]interface{}{
+				"numRequests": -5,
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "numRequests must be positive")
+	})
+
+	t.Run("ratio >= 1 returns error", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"warmup": map[string]interface{}{
+				"ratio": 1.0,
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ratio must be between 0 and 1")
+	})
+
+	t.Run("ratio <= 0 returns error", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"warmup": map[string]interface{}{
+				"ratio": -0.1,
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ratio must be between 0 and 1")
+	})
+
+	t.Run("wrong type for numRequests", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"warmup": map[string]interface{}{
+				"numRequests": "not-a-number",
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "numRequests must be a number")
+	})
+
+	t.Run("wrong type for ratio", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"warmup": map[string]interface{}{
+				"ratio": "not-a-number",
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ratio must be a number")
+	})
+
+	t.Run("warmup not a map returns error", func(t *testing.T) {
+		ip := &InferencePerf{}
+		err := ip.Init(map[string]interface{}{
+			"warmup": "invalid",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "warmup must be a map")
+	})
+}
+
+func TestInferencePerf_BuildConfig_Warmup(t *testing.T) {
+	t.Run("warmup with numRequests generates 2 stages", func(t *testing.T) {
+		ip := &InferencePerf{
+			warmup: &WarmupConfig{NumRequests: intPtr(100)},
+		}
+		cfg, err := ip.buildConfig(EvalContext{
+			Endpoint:  "http://svc:8000",
+			ModelName: "my-model",
+			Scenario: config.ScenarioSpec{
+				Workload:    "fixed(100,200)",
+				Concurrency: 8,
+				MaxRequests: 1000,
+			},
+		})
+		require.NoError(t, err)
+		assert.True(t, ip.warmupEnabled)
+		require.Len(t, cfg.Load.Stages, 2)
+		// Stage 0: warmup
+		assert.Equal(t, 100, cfg.Load.Stages[0].NumRequests)
+		assert.Equal(t, 8, cfg.Load.Stages[0].ConcurrencyLevel)
+		// Stage 1: measurement
+		assert.Equal(t, 900, cfg.Load.Stages[1].NumRequests)
+		assert.Equal(t, 8, cfg.Load.Stages[1].ConcurrencyLevel)
+	})
+
+	t.Run("warmup with ratio generates 2 stages", func(t *testing.T) {
+		ip := &InferencePerf{
+			warmup: &WarmupConfig{Ratio: float64Ptr(0.1)},
+		}
+		cfg, err := ip.buildConfig(EvalContext{
+			Endpoint:  "http://svc:8000",
+			ModelName: "my-model",
+			Scenario: config.ScenarioSpec{
+				Workload:    "fixed(100,200)",
+				Concurrency: 4,
+				MaxRequests: 1000,
+			},
+		})
+		require.NoError(t, err)
+		assert.True(t, ip.warmupEnabled)
+		require.Len(t, cfg.Load.Stages, 2)
+		assert.Equal(t, 100, cfg.Load.Stages[0].NumRequests) // 1000 * 0.1 = 100
+		assert.Equal(t, 900, cfg.Load.Stages[1].NumRequests)
+	})
+
+	t.Run("warmup numRequests takes priority over ratio", func(t *testing.T) {
+		ip := &InferencePerf{
+			warmup: &WarmupConfig{
+				NumRequests: intPtr(50),
+				Ratio:       float64Ptr(0.5), // would be 500 if used
+			},
+		}
+		cfg, err := ip.buildConfig(EvalContext{
+			Endpoint:  "http://svc:8000",
+			ModelName: "my-model",
+			Scenario: config.ScenarioSpec{
+				Workload:    "fixed(100,200)",
+				Concurrency: 4,
+				MaxRequests: 1000,
+			},
+		})
+		require.NoError(t, err)
+		require.Len(t, cfg.Load.Stages, 2)
+		assert.Equal(t, 50, cfg.Load.Stages[0].NumRequests)
+		assert.Equal(t, 950, cfg.Load.Stages[1].NumRequests)
+	})
+
+	t.Run("warmup >= total requests returns error", func(t *testing.T) {
+		ip := &InferencePerf{
+			warmup: &WarmupConfig{NumRequests: intPtr(500)},
+		}
+		_, err := ip.buildConfig(EvalContext{
+			Endpoint:  "http://svc:8000",
+			ModelName: "my-model",
+			Scenario: config.ScenarioSpec{
+				Workload:    "fixed(100,200)",
+				Concurrency: 4,
+				MaxRequests: 500,
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "warmup requests (500) must be less than total requests (500)")
+	})
+
+	t.Run("warmup > total requests returns error", func(t *testing.T) {
+		ip := &InferencePerf{
+			warmup: &WarmupConfig{NumRequests: intPtr(600)},
+		}
+		_, err := ip.buildConfig(EvalContext{
+			Endpoint:  "http://svc:8000",
+			ModelName: "my-model",
+			Scenario: config.ScenarioSpec{
+				Workload:    "fixed(100,200)",
+				Concurrency: 4,
+				MaxRequests: 500,
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "warmup requests (600) must be less than total requests (500)")
+	})
+
+	t.Run("no warmup generates single stage", func(t *testing.T) {
+		ip := &InferencePerf{}
+		cfg, err := ip.buildConfig(EvalContext{
+			Endpoint:  "http://svc:8000",
+			ModelName: "my-model",
+			Scenario: config.ScenarioSpec{
+				Workload:    "fixed(100,200)",
+				Concurrency: 4,
+				MaxRequests: 500,
+			},
+		})
+		require.NoError(t, err)
+		assert.False(t, ip.warmupEnabled)
+		require.Len(t, cfg.Load.Stages, 1)
+		assert.Equal(t, 500, cfg.Load.Stages[0].NumRequests)
+	})
+
+	t.Run("warmup ratio 0.5 with default numRequests", func(t *testing.T) {
+		// defaultNumRequests = 500, ratio 0.5 → 250 warmup + 250 measurement
+		ip := &InferencePerf{
+			warmup: &WarmupConfig{Ratio: float64Ptr(0.5)},
+		}
+		cfg, err := ip.buildConfig(EvalContext{
+			Endpoint:  "http://svc:8000",
+			ModelName: "my-model",
+			Scenario: config.ScenarioSpec{
+				Workload:    "fixed(100,200)",
+				Concurrency: 4,
+			},
+		})
+		require.NoError(t, err)
+		require.Len(t, cfg.Load.Stages, 2)
+		assert.Equal(t, 250, cfg.Load.Stages[0].NumRequests)
+		assert.Equal(t, 250, cfg.Load.Stages[1].NumRequests)
+	})
+
+	t.Run("warmup YAML serialization", func(t *testing.T) {
+		ip := &InferencePerf{
+			warmup: &WarmupConfig{NumRequests: intPtr(100)},
+		}
+		cfg, err := ip.buildConfig(EvalContext{
+			Endpoint:  "http://svc:8000",
+			ModelName: "my-model",
+			Scenario: config.ScenarioSpec{
+				Workload:    "fixed(100,200)",
+				Concurrency: 8,
+				MaxRequests: 1000,
+			},
+		})
+		require.NoError(t, err)
+
+		data, err := yaml.Marshal(cfg)
+		require.NoError(t, err)
+
+		yamlStr := string(data)
+		assert.Contains(t, yamlStr, "num_requests: 100")
+		assert.Contains(t, yamlStr, "num_requests: 900")
+		assert.Contains(t, yamlStr, "concurrency_level: 8")
+
+		var roundtrip infPerfConfig
+		require.NoError(t, yaml.Unmarshal(data, &roundtrip))
+		require.Len(t, roundtrip.Load.Stages, 2)
+		assert.Equal(t, 100, roundtrip.Load.Stages[0].NumRequests)
+		assert.Equal(t, 900, roundtrip.Load.Stages[1].NumRequests)
+	})
+}
+
+func TestInferencePerf_CollectResults_Warmup(t *testing.T) {
+	t.Run("warmup skips stage_0 and uses stage_1", func(t *testing.T) {
+		dir := setupInfPerfResults(t, map[string]infPerfStageResult{
+			"stage_0_lifecycle_metrics.json": {
+				Successes: makeSuccesses(100, 0.500, 1.000, 2.000, 0.100, 0.300, 0.500, 100, 50, 150, 2),
+				Failures:  makeFailures(0),
+			},
+			"stage_1_lifecycle_metrics.json": {
+				Successes: makeSuccesses(900, 0.050, 0.100, 0.200, 0.005, 0.010, 0.015, 1500, 800, 2300, 25),
+				Failures:  makeFailures(2),
+			},
+		})
+
+		ip := &InferencePerf{warmupEnabled: true}
 		m, err := ip.CollectResults(dir)
 		require.NoError(t, err)
-		assert.Equal(t, float64(0), m.ErrorRate)
-		assert.Equal(t, 0, m.NumRequests)
+
+		// Should only reflect stage_1 (measurement) metrics
+		assert.InDelta(t, 50.0, m.TTFTP50, 0.01)  // stage_1 TTFT P50
+		assert.InDelta(t, 100.0, m.TTFTP90, 0.01) // stage_1 TTFT P90
+		assert.InDelta(t, 200.0, m.TTFTP99, 0.01) // stage_1 TTFT P99
+		assert.InDelta(t, 5.0, m.TPOTP50, 0.01)   // stage_1 TPOT P50
+		assert.InDelta(t, 10.0, m.TPOTP90, 0.01)  // stage_1 TPOT P90
+		assert.InDelta(t, 15.0, m.TPOTP99, 0.01)  // stage_1 TPOT P99
+		assert.InDelta(t, 1500.0, m.OutputThroughput, 0.01)
+		assert.Equal(t, 900, m.NumCompletedRequests)
+		assert.Equal(t, 2, m.NumErrorRequests)
+		assert.Equal(t, 902, m.NumRequests)
+	})
+
+	t.Run("warmup with multiple measurement stages aggregates all", func(t *testing.T) {
+		dir := setupInfPerfResults(t, map[string]infPerfStageResult{
+			"stage_0_lifecycle_metrics.json": {
+				Successes: makeSuccesses(100, 0.500, 1.000, 2.000, 0.100, 0.300, 0.500, 100, 50, 150, 2),
+				Failures:  makeFailures(0),
+			},
+			"stage_1_lifecycle_metrics.json": {
+				Successes: makeSuccesses(200, 0.010, 0.030, 0.050, 0.003, 0.006, 0.008, 1000, 500, 1500, 20),
+				Failures:  makeFailures(0),
+			},
+			"stage_2_lifecycle_metrics.json": {
+				Successes: makeSuccesses(200, 0.020, 0.060, 0.100, 0.005, 0.012, 0.020, 2000, 1000, 3000, 40),
+				Failures:  makeFailures(10),
+			},
+		})
+
+		ip := &InferencePerf{warmupEnabled: true}
+		m, err := ip.CollectResults(dir)
+		require.NoError(t, err)
+
+		// Aggregated from stage_1 + stage_2 (stage_0 skipped)
+		assert.InDelta(t, 20.0, m.TTFTP50, 0.01)            // max(10, 20)
+		assert.InDelta(t, 100.0, m.TTFTP99, 0.01)           // max(50, 100)
+		assert.InDelta(t, 1500.0, m.OutputThroughput, 0.01) // (1000+2000)/2
+		assert.Equal(t, 400, m.NumCompletedRequests)        // 200+200
+		assert.Equal(t, 10, m.NumErrorRequests)
+	})
+
+	t.Run("warmup enabled but only one stage returns error", func(t *testing.T) {
+		dir := setupInfPerfResults(t, map[string]infPerfStageResult{
+			"stage_0_lifecycle_metrics.json": {
+				Successes: makeSuccesses(100, 0.050, 0.100, 0.200, 0.005, 0.010, 0.015, 1500, 800, 2300, 25),
+				Failures:  makeFailures(0),
+			},
+		})
+
+		ip := &InferencePerf{warmupEnabled: true}
+		_, err := ip.CollectResults(dir)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "expected at least 2")
+	})
+
+	t.Run("warmup disabled aggregates all stages", func(t *testing.T) {
+		// Without warmupEnabled, all stages are used (backward compat)
+		dir := setupInfPerfResults(t, map[string]infPerfStageResult{
+			"stage_0_lifecycle_metrics.json": {
+				Successes: makeSuccesses(200, 0.010, 0.030, 0.050, 0.003, 0.006, 0.008, 1000, 500, 1500, 20),
+				Failures:  makeFailures(0),
+			},
+			"stage_1_lifecycle_metrics.json": {
+				Successes: makeSuccesses(200, 0.020, 0.060, 0.100, 0.005, 0.012, 0.020, 2000, 1000, 3000, 40),
+				Failures:  makeFailures(10),
+			},
+		})
+
+		ip := &InferencePerf{warmupEnabled: false}
+		m, err := ip.CollectResults(dir)
+		require.NoError(t, err)
+
+		assert.Equal(t, 400, m.NumCompletedRequests) // 200+200
+		assert.InDelta(t, 20.0, m.TTFTP50, 0.01)     // max(10, 20)
 	})
 }
 
@@ -573,7 +1436,7 @@ func TestInferencePerfFactoryRegistration(t *testing.T) {
 
 func makeSuccesses(
 	count int,
-	ttftP50, ttftP99, tpotP50, tpotP99 float64,
+	ttftP50, ttftP90, ttftP99, tpotP50, tpotP90, tpotP99 float64,
 	outputTP, inputTP, totalTP, rps float64,
 ) struct {
 	Count   int `json:"count"`
@@ -602,8 +1465,8 @@ func makeSuccesses(
 		} `json:"throughput"`
 	}
 	s.Count = count
-	s.Latency.TimeToFirstToken = infPerfPercentiles{P50: ttftP50, P99: ttftP99}
-	s.Latency.TimePerOutputToken = infPerfPercentiles{P50: tpotP50, P99: tpotP99}
+	s.Latency.TimeToFirstToken = infPerfPercentiles{P50: ttftP50, P90: ttftP90, P99: ttftP99}
+	s.Latency.TimePerOutputToken = infPerfPercentiles{P50: tpotP50, P90: tpotP90, P99: tpotP99}
 	s.Throughput.OutputTokensPerSec = outputTP
 	s.Throughput.InputTokensPerSec = inputTP
 	s.Throughput.TotalTokensPerSec = totalTP

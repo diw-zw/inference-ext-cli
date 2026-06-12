@@ -161,7 +161,11 @@ func (g *GenAIBench) CollectResults(resultDir string) (*abtypes.Metrics, error) 
 		return nil, fmt.Errorf("no result JSON files found in %q", resultDir)
 	}
 
-	return aggregateResults(results), nil
+	metrics := aggregateResults(results)
+	if metrics.NumCompletedRequests == 0 {
+		return nil, fmt.Errorf("all %d requests failed (0 successes) in %q", metrics.NumRequests, resultDir)
+	}
+	return metrics, nil
 }
 
 // aggregateResults merges metrics across multiple concurrency-level results.
@@ -172,7 +176,7 @@ func aggregateResults(results []benchmarkResult) *abtypes.Metrics {
 
 	var sumOutputTP, sumInputTP, sumTotalTP, sumRPS float64
 	var maxErrorRate float64
-	var maxTTFTP50, maxTTFTP99, maxTPOTP50, maxTPOTP99 float64
+	var maxTTFTP50, maxTTFTP90, maxTTFTP99, maxTPOTP50, maxTPOTP90, maxTPOTP99 float64
 	var totalCompleted, totalErrors, totalRequests int
 
 	for _, r := range results {
@@ -188,10 +192,12 @@ func aggregateResults(results []benchmarkResult) *abtypes.Metrics {
 
 		if ttft, ok := am.Stats["ttft"]; ok {
 			maxTTFTP50 = math.Max(maxTTFTP50, ttft.P50)
+			maxTTFTP90 = math.Max(maxTTFTP90, ttft.P90)
 			maxTTFTP99 = math.Max(maxTTFTP99, ttft.P99)
 		}
 		if tpot, ok := am.Stats["tpot"]; ok {
 			maxTPOTP50 = math.Max(maxTPOTP50, tpot.P50)
+			maxTPOTP90 = math.Max(maxTPOTP90, tpot.P90)
 			maxTPOTP99 = math.Max(maxTPOTP99, tpot.P99)
 		}
 	}
@@ -205,8 +211,10 @@ func aggregateResults(results []benchmarkResult) *abtypes.Metrics {
 	m.NumErrorRequests = totalErrors
 	m.NumRequests = totalRequests
 	m.TTFTP50 = maxTTFTP50
+	m.TTFTP90 = maxTTFTP90
 	m.TTFTP99 = maxTTFTP99
 	m.TPOTP50 = maxTPOTP50
+	m.TPOTP90 = maxTPOTP90
 	m.TPOTP99 = maxTPOTP99
 
 	return m
@@ -231,6 +239,7 @@ type aggregatedMetrics struct {
 
 type stats struct {
 	P50 float64 `json:"p50"`
+	P90 float64 `json:"p90"`
 	P99 float64 `json:"p99"`
 }
 

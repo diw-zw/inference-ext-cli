@@ -173,6 +173,73 @@ func TestEvaluateSLA(t *testing.T) {
 			wantConstraints: []float64{0.05},
 			wantScore:       500,
 		},
+		{
+			name: "TTFT P90 SLA pass and fail",
+			metrics: &abtypes.Metrics{
+				TTFTP90:          800,
+				TTFTP99:          1500,
+				OutputThroughput: 2000,
+			},
+			objectives: config.ObjectivesSpec{
+				SLA:      config.SLASpec{TTFTP90MaxMs: f64(1000)},
+				Optimize: "outputThroughput",
+			},
+			// 800 <= 1000, passes: deviation = 0
+			wantConstraints: []float64{0},
+			wantScore:       2000,
+		},
+		{
+			name: "TTFT P90 exceeds SLA",
+			metrics: &abtypes.Metrics{
+				TTFTP90:          1500,
+				OutputThroughput: 1000,
+			},
+			objectives: config.ObjectivesSpec{
+				SLA:      config.SLASpec{TTFTP90MaxMs: f64(1000)},
+				Optimize: "outputThroughput",
+			},
+			// (1500 - 1000) / 1000 = 0.5
+			wantConstraints: []float64{0.5},
+			wantScore:       1000,
+		},
+		{
+			name: "TPOT P90 exceeds SLA",
+			metrics: &abtypes.Metrics{
+				TPOTP90:          12,
+				OutputThroughput: 1000,
+			},
+			objectives: config.ObjectivesSpec{
+				SLA:      config.SLASpec{TPOTP90MaxMs: f64(10)},
+				Optimize: "outputThroughput",
+			},
+			// (12 - 10) / 10 = 0.2
+			wantConstraints: []float64{0.2},
+			wantScore:       1000,
+		},
+		{
+			name: "all P90 and P99 constraints together",
+			metrics: &abtypes.Metrics{
+				TTFTP90:          500,
+				TTFTP99:          1500,
+				TPOTP90:          8,
+				TPOTP99:          15,
+				ErrorRate:        0.005,
+				OutputThroughput: 2000,
+			},
+			objectives: config.ObjectivesSpec{
+				SLA: config.SLASpec{
+					TTFTP90MaxMs: f64(1000),
+					TTFTP99MaxMs: f64(2000),
+					TPOTP90MaxMs: f64(10),
+					TPOTP99MaxMs: f64(20),
+					ErrorRateMax: f64(0.01),
+				},
+				Optimize: "outputThroughput",
+			},
+			// All pass: 5 constraints, all 0
+			wantConstraints: []float64{0, 0, 0, 0, 0},
+			wantScore:       2000,
+		},
 	}
 
 	for _, tt := range tests {

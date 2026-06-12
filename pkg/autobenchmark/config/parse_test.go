@@ -418,9 +418,19 @@ func TestValidate_SLANegativeValues(t *testing.T) {
 			wantErr: "objectives.sla.ttftP99MaxMs: must not be negative",
 		},
 		{
+			name:    "negative ttftP90MaxMs",
+			modify:  func(cfg *AutoBenchmarkConfig) { v := -100.0; cfg.Objectives.SLA.TTFTP90MaxMs = &v },
+			wantErr: "objectives.sla.ttftP90MaxMs: must not be negative",
+		},
+		{
 			name:    "negative tpotP99MaxMs",
 			modify:  func(cfg *AutoBenchmarkConfig) { v := -50.0; cfg.Objectives.SLA.TPOTP99MaxMs = &v },
 			wantErr: "objectives.sla.tpotP99MaxMs: must not be negative",
+		},
+		{
+			name:    "negative tpotP90MaxMs",
+			modify:  func(cfg *AutoBenchmarkConfig) { v := -50.0; cfg.Objectives.SLA.TPOTP90MaxMs = &v },
+			wantErr: "objectives.sla.tpotP90MaxMs: must not be negative",
 		},
 		{
 			name:    "negative errorRateMax",
@@ -446,7 +456,9 @@ func TestValidate_SLAZeroValues(t *testing.T) {
 	require.NoError(t, err)
 	// Zero values are allowed (used as fallback in deviation calculation)
 	zero := 0.0
+	cfg.Objectives.SLA.TTFTP90MaxMs = &zero
 	cfg.Objectives.SLA.TTFTP99MaxMs = &zero
+	cfg.Objectives.SLA.TPOTP90MaxMs = &zero
 	cfg.Objectives.SLA.TPOTP99MaxMs = &zero
 	cfg.Objectives.SLA.ErrorRateMax = &zero
 	err = Validate(cfg, false)
@@ -495,6 +507,82 @@ results:
 
 	err = Validate(cfg, false)
 	assert.NoError(t, err)
+}
+
+func TestValidate_ConversationReplayWorkloadRequiresInferencePerf(t *testing.T) {
+	cfg, err := Parse([]byte(fullValidConfig()))
+	require.NoError(t, err)
+	cfg.Scenario.Workload = "conversation_replay"
+	cfg.Evaluator.Type = "genai-bench"
+	err = Validate(cfg, false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "only supported by inference-perf")
+}
+
+func TestValidate_ConversationReplayWorkloadWithInferencePerf(t *testing.T) {
+	cfg, err := Parse([]byte(fullValidConfig()))
+	require.NoError(t, err)
+	cfg.Scenario.Workload = "conversation_replay"
+	cfg.Evaluator.Type = "inference-perf"
+	err = Validate(cfg, false)
+	assert.NoError(t, err)
+}
+
+func TestValidate_ConcurrencySweep(t *testing.T) {
+	t.Run("valid sweep with TTFT SLA", func(t *testing.T) {
+		cfg, err := Parse([]byte(fullValidConfig()))
+		require.NoError(t, err)
+		cfg.Scenario.ConcurrencySweep = []int{1, 2, 4, 8, 16}
+		cfg.Objectives.SLA.TTFTP99MaxMs = ptr(2000)
+		err = Validate(cfg, false)
+		assert.NoError(t, err)
+	})
+
+	t.Run("valid sweep with P90 SLA only", func(t *testing.T) {
+		cfg, err := Parse([]byte(fullValidConfig()))
+		require.NoError(t, err)
+		cfg.Scenario.ConcurrencySweep = []int{1, 2, 4}
+		cfg.Objectives.SLA.TTFTP99MaxMs = nil
+		cfg.Objectives.SLA.TPOTP99MaxMs = nil
+		cfg.Objectives.SLA.ErrorRateMax = nil
+		cfg.Objectives.SLA.TTFTP90MaxMs = ptr(1000) // only P90 constraint
+		err = Validate(cfg, false)
+		assert.NoError(t, err)
+	})
+
+	t.Run("sweep without any SLA constraint", func(t *testing.T) {
+		cfg, err := Parse([]byte(fullValidConfig()))
+		require.NoError(t, err)
+		cfg.Scenario.ConcurrencySweep = []int{1, 2, 4}
+		cfg.Objectives.SLA.TTFTP99MaxMs = nil
+		cfg.Objectives.SLA.TPOTP99MaxMs = nil
+		cfg.Objectives.SLA.ErrorRateMax = nil
+		cfg.Objectives.SLA.TTFTP90MaxMs = nil
+		cfg.Objectives.SLA.TPOTP90MaxMs = nil
+		err = Validate(cfg, false)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "at least one SLA constraint is required when concurrencySweep is set")
+	})
+
+	t.Run("sweep with non-positive value", func(t *testing.T) {
+		cfg, err := Parse([]byte(fullValidConfig()))
+		require.NoError(t, err)
+		cfg.Scenario.ConcurrencySweep = []int{1, 0, 4}
+		cfg.Objectives.SLA.TTFTP99MaxMs = ptr(2000)
+		err = Validate(cfg, false)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "concurrencySweep[1]: must be positive")
+	})
+
+	t.Run("sweep overrides concurrency validation", func(t *testing.T) {
+		cfg, err := Parse([]byte(fullValidConfig()))
+		require.NoError(t, err)
+		cfg.Scenario.Concurrency = 0 // would normally fail
+		cfg.Scenario.ConcurrencySweep = []int{2, 4, 8}
+		cfg.Objectives.SLA.TTFTP99MaxMs = ptr(2000)
+		err = Validate(cfg, false)
+		assert.NoError(t, err)
+	})
 }
 
 func ptr(v float64) *float64 { return &v }

@@ -35,7 +35,8 @@ import (
 
 // Builder creates trial-specific RBG specs from base templates.
 type Builder struct {
-	mapper *ParamMapper
+	mapper              *ParamMapper
+	excludeDefaultRoles map[string]bool
 }
 
 // NewBuilder creates a Builder for the given backend.
@@ -45,6 +46,16 @@ func NewBuilder(backend string) (*Builder, error) {
 		return nil, err
 	}
 	return &Builder{mapper: mapper}, nil
+}
+
+// SetExcludeDefaultRoles configures which roles should NOT inherit params from
+// the "default" key in RoleParamSet. This prevents engine-tuning params from
+// being applied to non-inference roles (e.g. router, proxy).
+func (b *Builder) SetExcludeDefaultRoles(roles []string) {
+	b.excludeDefaultRoles = make(map[string]bool, len(roles))
+	for _, r := range roles {
+		b.excludeDefaultRoles[r] = true
+	}
 }
 
 // LoadTemplate reads an RBG YAML file and extracts the RoleBasedGroup object.
@@ -121,11 +132,14 @@ func (b *Builder) BuildTrial(base *workloadsv1alpha2.RoleBasedGroup, trialIndex 
 	for i := range trial.Spec.Roles {
 		role := &trial.Spec.Roles[i]
 
-		// Collect params for this role: start with "default", then override with role-specific
+		// Collect params for this role: start with "default", then override with role-specific.
+		// Roles listed in excludeDefaultRoles do not inherit "default" params.
 		merged := make(map[string]any)
-		if defaultParams, ok := params["default"]; ok {
-			for k, v := range defaultParams {
-				merged[k] = v
+		if !b.excludeDefaultRoles[role.Name] {
+			if defaultParams, ok := params["default"]; ok {
+				for k, v := range defaultParams {
+					merged[k] = v
+				}
 			}
 		}
 		if roleParams, ok := params[role.Name]; ok {

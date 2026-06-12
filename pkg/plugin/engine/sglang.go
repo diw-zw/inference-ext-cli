@@ -21,6 +21,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	workloadsv1alpha2 "sigs.k8s.io/rbgs/api/workloads/v1alpha2"
 	"sigs.k8s.io/rbgs/cli/pkg/plugin/util"
 )
@@ -157,6 +158,17 @@ func (s *SGLangEngine) generatePodTemplate(opts GenerateOptions) (*corev1.PodTem
 					},
 					Env:       env,
 					Resources: opts.Resources,
+					ReadinessProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path: "/health",
+								Port: intstr.FromInt32(s.Port),
+							},
+						},
+						InitialDelaySeconds: ReadinessProbeInitialDelaySeconds,
+						PeriodSeconds:       ReadinessProbePeriodSeconds,
+						FailureThreshold:    ReadinessProbeFailureThreshold,
+					},
 				},
 			},
 		},

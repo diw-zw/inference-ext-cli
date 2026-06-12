@@ -43,11 +43,12 @@ type Evaluator interface {
 
 // EvalContext provides context for running a benchmark evaluation.
 type EvalContext struct {
-	Endpoint  string              // inference service URL (e.g., http://svc:8000)
-	ModelName string              // model name for the benchmark tool
-	Backend   string              // inference backend (sglang | vllm)
-	Scenario  config.ScenarioSpec // workload scenario (generic format)
-	OutputDir string              // local directory for result output
+	Endpoint   string              // inference service URL (e.g., http://svc:8000)
+	ModelName  string              // model name for the benchmark tool
+	Backend    string              // inference backend (sglang | vllm)
+	Scenario   config.ScenarioSpec // workload scenario (generic format)
+	OutputDir  string              // local directory for result output
+	SkipWarmup bool                // skip warmup stage (e.g., subsequent sweep levels reuse warmed KV cache)
 }
 
 // Factory is a function that creates a new Evaluator instance.

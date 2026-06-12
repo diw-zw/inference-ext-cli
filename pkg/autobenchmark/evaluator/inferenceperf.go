@@ -44,12 +44,38 @@ func init() {
 // InferencePerf implements the Evaluator interface using the inference-perf tool
 // (kubernetes-sigs/inference-perf).
 type InferencePerf struct {
-	tokenizerSource string
-	apiKey          string
-	baseSeed        *int
-	apiType         string
-	streaming       *bool
-	datasetPath     string
+	tokenizerSource    string
+	apiKey             string
+	baseSeed           *int
+	apiType            string
+	streaming          *bool
+	datasetPath        string
+	conversationReplay *ConversationReplayConfig
+	warmup             *WarmupConfig
+	warmupEnabled      bool // set by buildConfig; used by CollectResults to skip warmup stage
+}
+
+// WarmupConfig holds warm-up stage configuration.
+// Warm-up requests are sent before the measurement stage to pre-fill KV Cache
+// (e.g., shared system prompt prefixes), ensuring stable cache hit rates during measurement.
+// Exactly one of NumRequests or Ratio should be specified.
+type WarmupConfig struct {
+	NumRequests *int     // Absolute number of warmup requests
+	Ratio       *float64 // Warmup as fraction of total requests (0 < ratio < 1)
+}
+
+// validate checks warmup config constraints.
+func (w *WarmupConfig) validate() error {
+	if w.NumRequests == nil && w.Ratio == nil {
+		return fmt.Errorf("warmup: numRequests or ratio must be specified")
+	}
+	if w.NumRequests != nil && *w.NumRequests <= 0 {
+		return fmt.Errorf("warmup: numRequests must be positive, got %d", *w.NumRequests)
+	}
+	if w.Ratio != nil && (*w.Ratio <= 0 || *w.Ratio >= 1) {
+		return fmt.Errorf("warmup: ratio must be between 0 and 1 (exclusive), got %v", *w.Ratio)
+	}
+	return nil
 }
 
 // Name returns the evaluator name.
@@ -105,6 +131,61 @@ func (ip *InferencePerf) Init(cfg map[string]interface{}) error {
 		}
 		ip.datasetPath = s
 	}
+	if v, ok := cfg["conversationReplay"]; ok {
+		bytes, err := yaml.Marshal(v)
+		if err != nil {
+			return fmt.Errorf("inference-perf: conversationReplay: %w", err)
+		}
+		var cr ConversationReplayConfig
+		if err := yaml.Unmarshal(bytes, &cr); err != nil {
+			return fmt.Errorf("inference-perf: conversationReplay: %w", err)
+		}
+		if err := cr.validate(); err != nil {
+			return fmt.Errorf("inference-perf: conversationReplay: %w", err)
+		}
+		ip.conversationReplay = &cr
+	}
+	if v, ok := cfg["warmup"]; ok {
+		if err := ip.parseWarmup(v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// parseWarmup parses the warmup section from evaluator config.
+func (ip *InferencePerf) parseWarmup(v interface{}) error {
+	m, ok := v.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("inference-perf: warmup must be a map, got %T", v)
+	}
+	w := &WarmupConfig{}
+	if v, ok := m["numRequests"]; ok {
+		switch n := v.(type) {
+		case int:
+			w.NumRequests = &n
+		case float64:
+			i := int(n)
+			w.NumRequests = &i
+		default:
+			return fmt.Errorf("inference-perf: warmup.numRequests must be a number, got %T", v)
+		}
+	}
+	if v, ok := m["ratio"]; ok {
+		switch f := v.(type) {
+		case float64:
+			w.Ratio = &f
+		case int:
+			fv := float64(f)
+			w.Ratio = &fv
+		default:
+			return fmt.Errorf("inference-perf: warmup.ratio must be a number, got %T", v)
+		}
+	}
+	if err := w.validate(); err != nil {
+		return fmt.Errorf("inference-perf: warmup: %w", err)
+	}
+	ip.warmup = w
 	return nil
 }
 
@@ -134,6 +215,7 @@ func (ip *InferencePerf) Run(ctx context.Context, evalCtx EvalContext) error {
 
 	cmd := exec.CommandContext(ctx, "inference-perf", "--config_file", configPath)
 	cmd.Dir = evalCtx.OutputDir
+	cmd.Env = append(os.Environ(), "TOKENIZERS_PARALLELISM=false")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -146,6 +228,8 @@ func (ip *InferencePerf) Run(ctx context.Context, evalCtx EvalContext) error {
 // CollectResults reads inference-perf output files and extracts metrics.
 // It looks for per-stage files first (for worst-case latency aggregation),
 // falling back to the summary file.
+// When warmup is enabled, the first stage (stage_0) is skipped and only
+// measurement stages are aggregated.
 func (ip *InferencePerf) CollectResults(resultDir string) (*abtypes.Metrics, error) {
 	reportsDir, err := findReportsDir(resultDir)
 	if err != nil {
@@ -157,13 +241,28 @@ func (ip *InferencePerf) CollectResults(resultDir string) (*abtypes.Metrics, err
 		return nil, fmt.Errorf("reading stage files in %q: %w", reportsDir, stageErr)
 	}
 	if len(stageResults) > 0 {
-		return aggregateInfPerfResults(stageResults), nil
+		// Skip warmup stage if warmup was enabled during config generation.
+		measurementResults := stageResults
+		if ip.warmupEnabled {
+			if len(stageResults) < 2 {
+				return nil, fmt.Errorf("warmup was enabled but only %d stage(s) found; expected at least 2", len(stageResults))
+			}
+			measurementResults = stageResults[1:]
+		}
+		metrics := aggregateInfPerfResults(measurementResults)
+		if metrics.NumCompletedRequests == 0 {
+			return nil, fmt.Errorf("all %d requests failed (0 successes) in %q", metrics.NumRequests, reportsDir)
+		}
+		return metrics, nil
 	}
 
 	summaryPath := filepath.Join(reportsDir, "summary_lifecycle_metrics.json")
 	result, err := readInfPerfResultFile(summaryPath)
 	if err != nil {
 		return nil, fmt.Errorf("no stage or summary files found in %q: %w", reportsDir, err)
+	}
+	if result.Successes.Count == 0 {
+		return nil, fmt.Errorf("all %d requests failed (0 successes) in %q", result.Failures.Count, reportsDir)
 	}
 	return mapInfPerfToMetrics(result), nil
 }
@@ -198,10 +297,11 @@ type infPerfTokenizer struct {
 }
 
 type infPerfData struct {
-	Type               string               `yaml:"type"`
-	Path               string               `yaml:"path,omitempty"`
-	InputDistribution  *infPerfDistribution `yaml:"input_distribution,omitempty"`
-	OutputDistribution *infPerfDistribution `yaml:"output_distribution,omitempty"`
+	Type               string                     `yaml:"type"`
+	Path               string                     `yaml:"path,omitempty"`
+	InputDistribution  *infPerfDistribution       `yaml:"input_distribution,omitempty"`
+	OutputDistribution *infPerfDistribution       `yaml:"output_distribution,omitempty"`
+	ConversationReplay *infPerfConversationReplay `yaml:"conversation_replay,omitempty"`
 }
 
 type infPerfDistribution struct {
@@ -211,6 +311,111 @@ type infPerfDistribution struct {
 	Mean       *float64 `yaml:"mean,omitempty"`
 	StdDev     *float64 `yaml:"std_dev,omitempty"`
 	TotalCount int      `yaml:"total_count"`
+}
+
+type infPerfConversationReplay struct {
+	Seed                   int                       `yaml:"seed"`
+	NumConversations       int                       `yaml:"num_conversations"`
+	SharedSystemPromptLen  int                       `yaml:"shared_system_prompt_len"`
+	DynamicSystemPromptLen *infPerfDistributionParam `yaml:"dynamic_system_prompt_len,omitempty"`
+	TurnsPerConversation   *infPerfDistributionParam `yaml:"turns_per_conversation"`
+	InputTokensPerTurn     *infPerfDistributionParam `yaml:"input_tokens_per_turn"`
+	OutputTokensPerTurn    *infPerfDistributionParam `yaml:"output_tokens_per_turn"`
+	ToolCallLatencySec     *infPerfDistributionParam `yaml:"tool_call_latency_sec,omitempty"`
+}
+
+type infPerfDistributionParam struct {
+	Type   string   `yaml:"type"`
+	Min    *float64 `yaml:"min,omitempty"`
+	Max    *float64 `yaml:"max,omitempty"`
+	Mean   *float64 `yaml:"mean,omitempty"`
+	StdDev *float64 `yaml:"std_dev,omitempty"`
+}
+
+// ConversationReplayConfig holds user-facing configuration for conversation_replay workload.
+type ConversationReplayConfig struct {
+	Seed                   int                      `yaml:"seed" json:"seed"`
+	NumConversations       int                      `yaml:"numConversations" json:"numConversations"`
+	SharedSystemPromptLen  int                      `yaml:"sharedSystemPromptLen" json:"sharedSystemPromptLen"`
+	DynamicSystemPromptLen *DistributionParamConfig `yaml:"dynamicSystemPromptLen,omitempty" json:"dynamicSystemPromptLen,omitempty"`
+	TurnsPerConversation   *DistributionParamConfig `yaml:"turnsPerConversation" json:"turnsPerConversation"`
+	InputTokensPerTurn     *DistributionParamConfig `yaml:"inputTokensPerTurn" json:"inputTokensPerTurn"`
+	OutputTokensPerTurn    *DistributionParamConfig `yaml:"outputTokensPerTurn" json:"outputTokensPerTurn"`
+	ToolCallLatencySec     *DistributionParamConfig `yaml:"toolCallLatencySec,omitempty" json:"toolCallLatencySec,omitempty"`
+}
+
+// DistributionParamConfig describes a statistical distribution (normal, lognormal, uniform, fixed).
+type DistributionParamConfig struct {
+	Type   string   `yaml:"type" json:"type"`
+	Min    *float64 `yaml:"min,omitempty" json:"min,omitempty"`
+	Max    *float64 `yaml:"max,omitempty" json:"max,omitempty"`
+	Mean   *float64 `yaml:"mean,omitempty" json:"mean,omitempty"`
+	StdDev *float64 `yaml:"stdDev,omitempty" json:"stdDev,omitempty"`
+}
+
+func (cr *ConversationReplayConfig) validate() error {
+	if cr.NumConversations <= 0 {
+		return fmt.Errorf("numConversations must be positive, got %d", cr.NumConversations)
+	}
+	if cr.SharedSystemPromptLen < 0 {
+		return fmt.Errorf("sharedSystemPromptLen must not be negative, got %d", cr.SharedSystemPromptLen)
+	}
+	required := map[string]*DistributionParamConfig{
+		"turnsPerConversation": cr.TurnsPerConversation,
+		"inputTokensPerTurn":   cr.InputTokensPerTurn,
+		"outputTokensPerTurn":  cr.OutputTokensPerTurn,
+	}
+	for name, dp := range required {
+		if dp == nil {
+			return fmt.Errorf("%s is required", name)
+		}
+		if err := dp.validate(name); err != nil {
+			return err
+		}
+	}
+	if cr.DynamicSystemPromptLen != nil {
+		if err := cr.DynamicSystemPromptLen.validate("dynamicSystemPromptLen"); err != nil {
+			return err
+		}
+	}
+	if cr.ToolCallLatencySec != nil {
+		if err := cr.ToolCallLatencySec.validate("toolCallLatencySec"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+var supportedDistributionTypes = []string{"normal", "lognormal", "uniform", "fixed"}
+
+func (d *DistributionParamConfig) validate(fieldName string) error {
+	found := false
+	for _, t := range supportedDistributionTypes {
+		if d.Type == t {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("%s.type: unsupported value %q, must be one of %v", fieldName, d.Type, supportedDistributionTypes)
+	}
+	if d.Min != nil && d.Max != nil && *d.Min > *d.Max {
+		return fmt.Errorf("%s: min (%v) must be <= max (%v)", fieldName, *d.Min, *d.Max)
+	}
+	return nil
+}
+
+func toInfPerfDistParam(d *DistributionParamConfig) *infPerfDistributionParam {
+	if d == nil {
+		return nil
+	}
+	return &infPerfDistributionParam{
+		Type:   d.Type,
+		Min:    d.Min,
+		Max:    d.Max,
+		Mean:   d.Mean,
+		StdDev: d.StdDev,
+	}
 }
 
 type infPerfLoad struct {
@@ -235,6 +440,9 @@ type infPerfRequestLifecycle struct {
 }
 
 func (ip *InferencePerf) buildConfig(evalCtx EvalContext) (*infPerfConfig, error) {
+	// Reset warmup state so CollectResults matches the current run's stage layout.
+	ip.warmupEnabled = false
+
 	scenario := evalCtx.Scenario
 	backend := evalCtx.Backend
 	if backend == "" {
@@ -293,8 +501,32 @@ func (ip *InferencePerf) buildConfig(evalCtx EvalContext) (*infPerfConfig, error
 	if scenario.Concurrency <= 0 {
 		return nil, fmt.Errorf("scenario.concurrency must be positive, got %d", scenario.Concurrency)
 	}
+
+	// Build stages: optional warm-up stage + measurement stage.
+	// Warm-up requests pre-fill KV Cache (e.g., shared system prompts) so
+	// that measurement results reflect stable cache-hit behavior.
+	// In sweep mode, only the first concurrency level warms up; subsequent
+	// levels reuse the already-warmed KV cache (SkipWarmup=true).
+	warmupRequests := 0
+	if ip.warmup != nil && !evalCtx.SkipWarmup {
+		if ip.warmup.NumRequests != nil {
+			warmupRequests = *ip.warmup.NumRequests
+		} else if ip.warmup.Ratio != nil {
+			warmupRequests = int(float64(numRequests) * (*ip.warmup.Ratio))
+		}
+		if warmupRequests > 0 {
+			if warmupRequests >= numRequests {
+				return nil, fmt.Errorf("warmup requests (%d) must be less than total requests (%d)", warmupRequests, numRequests)
+			}
+			ip.warmupEnabled = true
+			cfg.Load.Stages = append(cfg.Load.Stages, infPerfConcurrentStage{
+				NumRequests:      warmupRequests,
+				ConcurrencyLevel: scenario.Concurrency,
+			})
+		}
+	}
 	cfg.Load.Stages = append(cfg.Load.Stages, infPerfConcurrentStage{
-		NumRequests:      numRequests,
+		NumRequests:      numRequests - warmupRequests,
 		ConcurrencyLevel: scenario.Concurrency,
 	})
 
@@ -342,6 +574,28 @@ func (ip *InferencePerf) buildDataConfig(cfg *infPerfConfig, scenario config.Sce
 			return fmt.Errorf("datasetPath is required in evaluator config when workload type is %q", wl.Type)
 		}
 		cfg.Data = infPerfData{Type: "shareGPT", Path: ip.datasetPath}
+	case config.WorkloadConversationReplay:
+		if ip.conversationReplay == nil {
+			return fmt.Errorf("conversationReplay config is required in evaluator config when workload type is %q", wl.Type)
+		}
+		cr := ip.conversationReplay
+		seed := cr.Seed
+		if seed == 0 && ip.baseSeed != nil {
+			seed = *ip.baseSeed
+		}
+		cfg.Data = infPerfData{
+			Type: "conversation_replay",
+			ConversationReplay: &infPerfConversationReplay{
+				Seed:                   seed,
+				NumConversations:       cr.NumConversations,
+				SharedSystemPromptLen:  cr.SharedSystemPromptLen,
+				DynamicSystemPromptLen: toInfPerfDistParam(cr.DynamicSystemPromptLen),
+				TurnsPerConversation:   toInfPerfDistParam(cr.TurnsPerConversation),
+				InputTokensPerTurn:     toInfPerfDistParam(cr.InputTokensPerTurn),
+				OutputTokensPerTurn:    toInfPerfDistParam(cr.OutputTokensPerTurn),
+				ToolCallLatencySec:     toInfPerfDistParam(cr.ToolCallLatencySec),
+			},
+		}
 	default:
 		return fmt.Errorf("unsupported workload type %q", wl.Type)
 	}
@@ -413,6 +667,7 @@ type infPerfStageResult struct {
 
 type infPerfPercentiles struct {
 	P50 float64 `json:"p50"`
+	P90 float64 `json:"p90"`
 	P99 float64 `json:"p99"`
 }
 
@@ -502,7 +757,7 @@ func aggregateInfPerfResults(results []infPerfStageResult) *abtypes.Metrics {
 
 	var sumOutputTP, sumInputTP, sumTotalTP, sumRPS float64
 	var maxErrorRate float64
-	var maxTTFTP50, maxTTFTP99, maxTPOTP50, maxTPOTP99 float64
+	var maxTTFTP50, maxTTFTP90, maxTTFTP99, maxTPOTP50, maxTPOTP90, maxTPOTP99 float64
 	var totalCompleted, totalErrors int
 
 	for _, r := range results {
@@ -522,12 +777,16 @@ func aggregateInfPerfResults(results []infPerfStageResult) *abtypes.Metrics {
 
 		// Latency: seconds -> milliseconds, then take worst-case
 		ttftP50 := r.Successes.Latency.TimeToFirstToken.P50 * 1000
+		ttftP90 := r.Successes.Latency.TimeToFirstToken.P90 * 1000
 		ttftP99 := r.Successes.Latency.TimeToFirstToken.P99 * 1000
 		tpotP50 := r.Successes.Latency.TimePerOutputToken.P50 * 1000
+		tpotP90 := r.Successes.Latency.TimePerOutputToken.P90 * 1000
 		tpotP99 := r.Successes.Latency.TimePerOutputToken.P99 * 1000
 		maxTTFTP50 = math.Max(maxTTFTP50, ttftP50)
+		maxTTFTP90 = math.Max(maxTTFTP90, ttftP90)
 		maxTTFTP99 = math.Max(maxTTFTP99, ttftP99)
 		maxTPOTP50 = math.Max(maxTPOTP50, tpotP50)
+		maxTPOTP90 = math.Max(maxTPOTP90, tpotP90)
 		maxTPOTP99 = math.Max(maxTPOTP99, tpotP99)
 	}
 
@@ -540,8 +799,10 @@ func aggregateInfPerfResults(results []infPerfStageResult) *abtypes.Metrics {
 	m.NumErrorRequests = totalErrors
 	m.NumRequests = totalCompleted + totalErrors
 	m.TTFTP50 = maxTTFTP50
+	m.TTFTP90 = maxTTFTP90
 	m.TTFTP99 = maxTTFTP99
 	m.TPOTP50 = maxTPOTP50
+	m.TPOTP90 = maxTPOTP90
 	m.TPOTP99 = maxTPOTP99
 
 	return m
@@ -557,8 +818,10 @@ func mapInfPerfToMetrics(r *infPerfStageResult) *abtypes.Metrics {
 
 	return &abtypes.Metrics{
 		TTFTP50:              r.Successes.Latency.TimeToFirstToken.P50 * 1000,
+		TTFTP90:              r.Successes.Latency.TimeToFirstToken.P90 * 1000,
 		TTFTP99:              r.Successes.Latency.TimeToFirstToken.P99 * 1000,
 		TPOTP50:              r.Successes.Latency.TimePerOutputToken.P50 * 1000,
+		TPOTP90:              r.Successes.Latency.TimePerOutputToken.P90 * 1000,
 		TPOTP99:              r.Successes.Latency.TimePerOutputToken.P99 * 1000,
 		OutputThroughput:     r.Successes.Throughput.OutputTokensPerSec,
 		InputThroughput:      r.Successes.Throughput.InputTokensPerSec,

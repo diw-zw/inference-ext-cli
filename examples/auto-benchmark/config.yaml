@@ -41,8 +41,10 @@ scenario:
 # 优化目标和 SLA 约束
 objectives:
   sla:
-    ttftP99MaxMs: 2000       # TTFT P99 ≤ 2000ms
-    tpotP99MaxMs: 15         # TPOT P99 ≤ 15ms
+    ttftP90MaxMs: 1000       # TTFT P90 ≤ 1000ms (可选)
+    ttftP99MaxMs: 2000       # TTFT P99 ≤ 2000ms (可选)
+    tpotP90MaxMs: 10         # TPOT P90 ≤ 10ms (可选)
+    tpotP99MaxMs: 15         # TPOT P99 ≤ 15ms (可选)
     errorRateMax: 0.01       # Error rate ≤ 1%
   optimize: outputThroughput # 在满足 SLA 前提下最大化此指标
                              # 可选: outputThroughput | inputThroughput | requestsPerSecond

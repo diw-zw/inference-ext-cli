@@ -147,9 +147,33 @@ func validateScenario(cfg *AutoBenchmarkConfig) []string {
 	if cfg.Scenario.MaxRequests < 0 {
 		errs = append(errs, "scenario.maxRequests: must not be negative (0 means use tool default)")
 	}
-	if cfg.Scenario.Concurrency <= 0 {
+
+	if len(cfg.Scenario.ConcurrencySweep) > 0 {
+		for i, v := range cfg.Scenario.ConcurrencySweep {
+			if v <= 0 {
+				errs = append(errs, fmt.Sprintf("scenario.concurrencySweep[%d]: must be positive, got %d", i, v))
+			}
+		}
+		if cfg.Objectives.SLA.TTFTP90MaxMs == nil &&
+			cfg.Objectives.SLA.TTFTP99MaxMs == nil &&
+			cfg.Objectives.SLA.TPOTP90MaxMs == nil &&
+			cfg.Objectives.SLA.TPOTP99MaxMs == nil &&
+			cfg.Objectives.SLA.ErrorRateMax == nil {
+			errs = append(errs, "objectives.sla: at least one SLA constraint is required when concurrencySweep is set (used as sweep stopping criterion)")
+		}
+		if cfg.Scenario.MaxRequests < 0 {
+			errs = append(errs, "scenario.maxRequests: must not be negative")
+		}
+		if cfg.Scenario.MinRequests < 0 {
+			errs = append(errs, "scenario.minRequests: must not be negative")
+		}
+		if cfg.Scenario.MinRequests > 0 && cfg.Scenario.MaxRequests > 0 && cfg.Scenario.MinRequests > cfg.Scenario.MaxRequests {
+			errs = append(errs, "scenario.minRequests: must not exceed maxRequests")
+		}
+	} else if cfg.Scenario.Concurrency <= 0 {
 		errs = append(errs, "scenario.concurrency: must be positive")
 	}
+
 	if cfg.Scenario.Duration != "" {
 		if _, err := time.ParseDuration(cfg.Scenario.Duration); err != nil {
 			errs = append(errs, fmt.Sprintf("scenario.duration: invalid duration: %v", err))
@@ -161,8 +185,14 @@ func validateScenario(cfg *AutoBenchmarkConfig) []string {
 func validateSLA(cfg *AutoBenchmarkConfig) []string {
 	var errs []string
 	sla := cfg.Objectives.SLA
+	if sla.TTFTP90MaxMs != nil && *sla.TTFTP90MaxMs < 0 {
+		errs = append(errs, "objectives.sla.ttftP90MaxMs: must not be negative")
+	}
 	if sla.TTFTP99MaxMs != nil && *sla.TTFTP99MaxMs < 0 {
 		errs = append(errs, "objectives.sla.ttftP99MaxMs: must not be negative")
+	}
+	if sla.TPOTP90MaxMs != nil && *sla.TPOTP90MaxMs < 0 {
+		errs = append(errs, "objectives.sla.tpotP90MaxMs: must not be negative")
 	}
 	if sla.TPOTP99MaxMs != nil && *sla.TPOTP99MaxMs < 0 {
 		errs = append(errs, "objectives.sla.tpotP99MaxMs: must not be negative")
@@ -208,6 +238,9 @@ func validateEvaluator(cfg *AutoBenchmarkConfig) []string {
 	var errs []string
 	if cfg.Evaluator.Type == "" {
 		errs = append(errs, "evaluator.type: is required")
+	}
+	if cfg.Scenario.Workload == "conversation_replay" && cfg.Evaluator.Type != "" && cfg.Evaluator.Type != "inference-perf" {
+		errs = append(errs, fmt.Sprintf("evaluator.type: workload %q is only supported by inference-perf evaluator, got %q", cfg.Scenario.Workload, cfg.Evaluator.Type))
 	}
 	return errs
 }
@@ -298,6 +331,9 @@ func setDefaults(cfg *AutoBenchmarkConfig) error {
 	if cfg.Strategy.EarlyTermination.MaxConsecutiveErrors == nil {
 		var defaultMaxConsecutiveErrors = 3
 		cfg.Strategy.EarlyTermination.MaxConsecutiveErrors = &defaultMaxConsecutiveErrors
+	}
+	if cfg.ExcludeDefaultRoles == nil {
+		cfg.ExcludeDefaultRoles = []string{"router"}
 	}
 	return nil
 }
