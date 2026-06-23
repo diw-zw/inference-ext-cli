@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	workloadsv1alpha2 "sigs.k8s.io/rbgs/api/workloads/v1alpha2"
 	"sigs.k8s.io/rbgs/cli/pkg/plugin/util"
 )
@@ -195,6 +196,17 @@ func (v *VLLMEngine) generatePodTemplate(opts GenerateOptions) (*corev1.PodTempl
 					},
 					Env:       opts.Env,
 					Resources: opts.Resources,
+					ReadinessProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path: "/health",
+								Port: intstr.FromInt32(v.Port),
+							},
+						},
+						InitialDelaySeconds: ReadinessProbeInitialDelaySeconds,
+						PeriodSeconds:       ReadinessProbePeriodSeconds,
+						FailureThreshold:    ReadinessProbeFailureThreshold,
+					},
 				},
 			},
 		},

@@ -36,6 +36,7 @@ type TrialResult struct {
 	Constraints  []float64    `json:"constraints"` // per-SLA deviation, ≤0 = feasible
 	Score        float64      `json:"score"`
 	Error        string       `json:"error,omitempty"`
+	Warning      string       `json:"warning,omitempty"` // non-fatal issue (e.g., sweep stopped due to execution failure at a higher level)
 	Duration     Duration     `json:"duration"`
 	StartTime    time.Time    `json:"startTime"`
 	EndTime      time.Time    `json:"endTime"`
@@ -57,10 +58,15 @@ func (t *TrialResult) IsSLAFeasible() bool {
 
 // Metrics contains the benchmark performance metrics extracted from evaluator output.
 type Metrics struct {
+	// Concurrency records the concurrency level that produced these metrics (set during sweep).
+	Concurrency int `json:"concurrency,omitempty"`
+
 	// Latency metrics (milliseconds)
 	TTFTP50 float64 `json:"ttftP50"`
+	TTFTP90 float64 `json:"ttftP90"`
 	TTFTP99 float64 `json:"ttftP99"`
 	TPOTP50 float64 `json:"tpotP50"`
+	TPOTP90 float64 `json:"tpotP90"`
 	TPOTP99 float64 `json:"tpotP99"`
 
 	// Throughput metrics (tokens per second)

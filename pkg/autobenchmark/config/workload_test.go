@@ -57,6 +57,12 @@ func TestParseWorkload_Dataset(t *testing.T) {
 	assert.Equal(t, WorkloadDataset, w.Type)
 }
 
+func TestParseWorkload_ConversationReplay(t *testing.T) {
+	w, err := ParseWorkload("conversation_replay")
+	require.NoError(t, err)
+	assert.Equal(t, WorkloadConversationReplay, w.Type)
+}
+
 func TestParseWorkload_Invalid(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -88,5 +94,6 @@ func TestValidateWorkload(t *testing.T) {
 	assert.NoError(t, ValidateWorkload("normal(480,240/300,150)"))
 	assert.NoError(t, ValidateWorkload("uniform(100,500/200,800)"))
 	assert.NoError(t, ValidateWorkload("dataset"))
+	assert.NoError(t, ValidateWorkload("conversation_replay"))
 	assert.Error(t, ValidateWorkload("invalid"))
 }

@@ -158,23 +158,26 @@ type ResultStatus struct {
 
 // ResultConfig is a snapshot of the key config fields relevant for UI display.
 type ResultConfig struct {
-	Name                string            `json:"name"`
-	Backend             string            `json:"backend"`
-	Algorithm           string            `json:"algorithm"`
-	Optimize            string            `json:"optimize"`
-	SLA                 ResultSLA         `json:"sla"`
-	ScenarioName        string            `json:"scenarioName"`
-	ScenarioWorkload    string            `json:"scenarioWorkload"`
-	ScenarioConcurrency int               `json:"scenarioConcurrency"`
-	MaxTrialsPerTmpl    int               `json:"maxTrialsPerTemplate"`
-	Timeout             string            `json:"timeout,omitempty"`
-	Templates           []string          `json:"templates"`
-	SearchSpace         ResultSearchSpace `json:"searchSpace"`
+	Name                     string            `json:"name"`
+	Backend                  string            `json:"backend"`
+	Algorithm                string            `json:"algorithm"`
+	Optimize                 string            `json:"optimize"`
+	SLA                      ResultSLA         `json:"sla"`
+	ScenarioName             string            `json:"scenarioName"`
+	ScenarioWorkload         string            `json:"scenarioWorkload"`
+	ScenarioConcurrency      int               `json:"scenarioConcurrency"`
+	ScenarioConcurrencySweep []int             `json:"scenarioConcurrencySweep,omitempty"`
+	MaxTrialsPerTmpl         int               `json:"maxTrialsPerTemplate"`
+	Timeout                  string            `json:"timeout,omitempty"`
+	Templates                []string          `json:"templates"`
+	SearchSpace              ResultSearchSpace `json:"searchSpace"`
 }
 
 // ResultSLA mirrors the SLA constraints from config.
 type ResultSLA struct {
+	TTFTP90MaxMs *float64 `json:"ttftP90MaxMs,omitempty"`
 	TTFTP99MaxMs *float64 `json:"ttftP99MaxMs,omitempty"`
+	TPOTP90MaxMs *float64 `json:"tpotP90MaxMs,omitempty"`
 	TPOTP99MaxMs *float64 `json:"tpotP99MaxMs,omitempty"`
 	ErrorRateMax *float64 `json:"errorRateMax,omitempty"`
 }
@@ -233,12 +236,15 @@ func BuildResult(state *abtypes.ExperimentState, cfg *config.AutoBenchmarkConfig
 	result.Config.Backend = cfg.Backend
 	result.Config.Algorithm = cfg.Strategy.Algorithm
 	result.Config.Optimize = cfg.Objectives.Optimize
+	result.Config.SLA.TTFTP90MaxMs = cfg.Objectives.SLA.TTFTP90MaxMs
 	result.Config.SLA.TTFTP99MaxMs = cfg.Objectives.SLA.TTFTP99MaxMs
+	result.Config.SLA.TPOTP90MaxMs = cfg.Objectives.SLA.TPOTP90MaxMs
 	result.Config.SLA.TPOTP99MaxMs = cfg.Objectives.SLA.TPOTP99MaxMs
 	result.Config.SLA.ErrorRateMax = cfg.Objectives.SLA.ErrorRateMax
 	result.Config.ScenarioName = cfg.Scenario.Name
 	result.Config.ScenarioWorkload = cfg.Scenario.Workload
 	result.Config.ScenarioConcurrency = cfg.Scenario.Concurrency
+	result.Config.ScenarioConcurrencySweep = cfg.Scenario.ConcurrencySweep
 	result.Config.MaxTrialsPerTmpl = cfg.Strategy.MaxTrialsPerTemplate
 	result.Config.Timeout = cfg.Strategy.Timeout
 

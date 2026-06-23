@@ -28,8 +28,13 @@ type AutoBenchmarkConfig struct {
 	Backend string `yaml:"backend" json:"backend"`
 
 	// SearchSpace defines params to overlay on base RBG container commands.
-	// Keys are role names ("default" applies to all roles).
+	// Keys are role names ("default" applies to all roles unless excluded).
 	SearchSpace map[string]map[string]SearchParam `yaml:"searchSpace" json:"searchSpace"`
+
+	// ExcludeDefaultRoles lists role names that should NOT inherit params from
+	// the "default" search space key. This avoids applying engine-tuning params
+	// to non-inference roles (e.g. router, proxy). Defaults to ["router"].
+	ExcludeDefaultRoles []string `yaml:"excludeDefaultRoles,omitempty" json:"excludeDefaultRoles,omitempty"`
 
 	// Scenario defines the fixed workload configuration for benchmarking.
 	Scenario ScenarioSpec `yaml:"scenario" json:"scenario"`
@@ -84,11 +89,13 @@ type SearchParam struct {
 // Fields use project-own generic syntax; each evaluator plugin translates them
 // to its own CLI format (e.g. genai-bench D/N/U notation).
 type ScenarioSpec struct {
-	Name        string `yaml:"name" json:"name"`
-	Workload    string `yaml:"workload" json:"workload"`                           // project-own syntax: fixed(in,out), normal(μ_in,σ_in/μ_out,σ_out), uniform(min,max/min,max), dataset
-	Concurrency int    `yaml:"concurrency" json:"concurrency"`                     // concurrency level
-	Duration    string `yaml:"duration,omitempty" json:"duration,omitempty"`       // Go duration string, e.g. "2m", "30s"
-	MaxRequests int    `yaml:"maxRequests,omitempty" json:"maxRequests,omitempty"` // max requests per run
+	Name             string `yaml:"name" json:"name"`
+	Workload         string `yaml:"workload" json:"workload"`                                     // project-own syntax: fixed(in,out), normal(μ_in,σ_in/μ_out,σ_out), uniform(min,max/min,max), dataset
+	Concurrency      int    `yaml:"concurrency" json:"concurrency"`                               // concurrency level (used when ConcurrencySweep is empty)
+	ConcurrencySweep []int  `yaml:"concurrencySweep,omitempty" json:"concurrencySweep,omitempty"` // ascending concurrency levels for sweep; when set, Concurrency is ignored
+	Duration         string `yaml:"duration,omitempty" json:"duration,omitempty"`                 // Go duration string, e.g. "2m", "30s"
+	MaxRequests      int    `yaml:"maxRequests,omitempty" json:"maxRequests,omitempty"`           // max requests per run (at the highest concurrency level when sweeping)
+	MinRequests      int    `yaml:"minRequests,omitempty" json:"minRequests,omitempty"`           // minimum requests per sweep level (default 50); lower concurrency levels scale down toward this floor
 }
 
 // ObjectivesSpec defines SLA constraints and the optimization target.
@@ -99,7 +106,9 @@ type ObjectivesSpec struct {
 
 // SLASpec defines performance SLA constraints.
 type SLASpec struct {
+	TTFTP90MaxMs *float64 `yaml:"ttftP90MaxMs,omitempty" json:"ttftP90MaxMs,omitempty"`
 	TTFTP99MaxMs *float64 `yaml:"ttftP99MaxMs,omitempty" json:"ttftP99MaxMs,omitempty"`
+	TPOTP90MaxMs *float64 `yaml:"tpotP90MaxMs,omitempty" json:"tpotP90MaxMs,omitempty"`
 	TPOTP99MaxMs *float64 `yaml:"tpotP99MaxMs,omitempty" json:"tpotP99MaxMs,omitempty"`
 	ErrorRateMax *float64 `yaml:"errorRateMax,omitempty" json:"errorRateMax,omitempty"`
 }

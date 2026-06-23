@@ -42,8 +42,16 @@ func EvaluateSLA(metrics *abtypes.Metrics, objectives config.ObjectivesSpec) ([]
 	var constraints []float64
 
 	// Max constraints: actual should be <= limit (lower is better)
+	if sla.TTFTP90MaxMs != nil {
+		constraints = append(constraints, maxConstraintDeviation(metrics.TTFTP90, *sla.TTFTP90MaxMs))
+	}
+
 	if sla.TTFTP99MaxMs != nil {
 		constraints = append(constraints, maxConstraintDeviation(metrics.TTFTP99, *sla.TTFTP99MaxMs))
+	}
+
+	if sla.TPOTP90MaxMs != nil {
+		constraints = append(constraints, maxConstraintDeviation(metrics.TPOTP90, *sla.TPOTP90MaxMs))
 	}
 
 	if sla.TPOTP99MaxMs != nil {

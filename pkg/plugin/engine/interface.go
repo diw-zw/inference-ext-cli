@@ -25,6 +25,12 @@ import (
 	"sigs.k8s.io/rbgs/cli/pkg/plugin/util"
 )
 
+const (
+	ReadinessProbeInitialDelaySeconds = 10
+	ReadinessProbePeriodSeconds       = 5
+	ReadinessProbeFailureThreshold    = 360
+)
+
 // GenerateOptions contains all information needed to generate a pod template.
 type GenerateOptions struct {
 	Name             string

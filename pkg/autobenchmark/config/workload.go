@@ -26,10 +26,11 @@ import (
 type WorkloadType string
 
 const (
-	WorkloadFixed   WorkloadType = "fixed"
-	WorkloadNormal  WorkloadType = "normal"
-	WorkloadUniform WorkloadType = "uniform"
-	WorkloadDataset WorkloadType = "dataset"
+	WorkloadFixed              WorkloadType = "fixed"
+	WorkloadNormal             WorkloadType = "normal"
+	WorkloadUniform            WorkloadType = "uniform"
+	WorkloadDataset            WorkloadType = "dataset"
+	WorkloadConversationReplay WorkloadType = "conversation_replay"
 )
 
 // Workload represents a parsed workload string.
@@ -48,10 +49,11 @@ type Workload struct {
 }
 
 var (
-	fixedRe   = regexp.MustCompile(`^fixed\((\d+),(\d+)\)$`)
-	normalRe  = regexp.MustCompile(`^normal\((\d+),(\d+)/(\d+),(\d+)\)$`)
-	uniformRe = regexp.MustCompile(`^uniform\((\d+),(\d+)/(\d+),(\d+)\)$`)
-	datasetRe = regexp.MustCompile(`^dataset$`)
+	fixedRe              = regexp.MustCompile(`^fixed\((\d+),(\d+)\)$`)
+	normalRe             = regexp.MustCompile(`^normal\((\d+),(\d+)/(\d+),(\d+)\)$`)
+	uniformRe            = regexp.MustCompile(`^uniform\((\d+),(\d+)/(\d+),(\d+)\)$`)
+	datasetRe            = regexp.MustCompile(`^dataset$`)
+	conversationReplayRe = regexp.MustCompile(`^conversation_replay$`)
 )
 
 // ParseWorkload parses a workload string into a Workload struct.
@@ -63,6 +65,10 @@ var (
 func ParseWorkload(s string) (*Workload, error) {
 	if datasetRe.MatchString(s) {
 		return &Workload{Type: WorkloadDataset}, nil
+	}
+
+	if conversationReplayRe.MatchString(s) {
+		return &Workload{Type: WorkloadConversationReplay}, nil
 	}
 
 	if m := fixedRe.FindStringSubmatch(s); m != nil {
@@ -103,7 +109,7 @@ func ParseWorkload(s string) (*Workload, error) {
 		}, nil
 	}
 
-	return nil, fmt.Errorf("invalid workload string %q: expected one of fixed(in,out), normal(μ_in,σ_in/μ_out,σ_out), uniform(min_in,max_in/min_out,max_out), dataset", s)
+	return nil, fmt.Errorf("invalid workload string %q: expected one of fixed(in,out), normal(μ_in,σ_in/μ_out,σ_out), uniform(min_in,max_in/min_out,max_out), dataset, conversation_replay", s)
 }
 
 // ValidateWorkload validates that the string is a parseable workload.
