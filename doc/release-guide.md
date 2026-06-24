@@ -17,12 +17,12 @@ echo "<NEW_VERSION>" > VERSION
 The changelog script uses GitHub CLI (`gh`) to collect merged PRs since the last tag and generates entries in the following format:
 
 ```markdown
-## [v0.8.0](https://github.com/rolebasedgroup-registry.cn-beijing.cr.aliyuncs.com/dev/inference-ext-cli/tree/v0.8.0) (2026-05-15)
+## [v0.8.0](https://github.com/rolebasedgroup/inference-ext-cli/tree/v0.8.0) (2026-05-15)
 
-- feat: add auto-benchmark SLA evaluation ([#42](https://github.com/rolebasedgroup-registry.cn-beijing.cr.aliyuncs.com/dev/inference-ext-cli/pull/42) by [@author](https://github.com/author))
-- fix: resolve dashboard loading issue ([#43](https://github.com/rolebasedgroup-registry.cn-beijing.cr.aliyuncs.com/dev/inference-ext-cli/pull/43) by [@author](https://github.com/author))
+- feat: add auto-benchmark SLA evaluation ([#42](https://github.com/rolebasedgroup/inference-ext-cli/pull/42) by [@author](https://github.com/author))
+- fix: resolve dashboard loading issue ([#43](https://github.com/rolebasedgroup/inference-ext-cli/pull/43) by [@author](https://github.com/author))
 
-[Full Changelog](https://github.com/rolebasedgroup-registry.cn-beijing.cr.aliyuncs.com/dev/inference-ext-cli/compare/v0.7.0...v0.8.0)
+[Full Changelog](https://github.com/rolebasedgroup/inference-ext-cli/compare/v0.7.0...v0.8.0)
 ```
 
 Run the script:
@@ -34,7 +34,7 @@ Run the script:
 If working from a fork, use `--repo` to specify the upstream repository:
 
 ```bash
-./tools/changelog.sh --repo rolebasedgroup-registry.cn-beijing.cr.aliyuncs.com/dev/inference-ext-cli
+./tools/changelog.sh --repo rolebasedgroup/inference-ext-cli
 ```
 
 Review and edit the generated content:
